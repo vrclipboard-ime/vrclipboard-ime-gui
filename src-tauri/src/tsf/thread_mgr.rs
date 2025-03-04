@@ -6,7 +6,7 @@ use windows::Win32::{
 };
 
 pub struct ThreadMgr {
-    thread_mgr: ITfThreadMgr2,
+    pub thread_mgr: ITfThreadMgr2,
 }
 
 impl ThreadMgr {

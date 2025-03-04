@@ -2,7 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-track: transparent;
+  }
+
+  .dark {
+    --scrollbar-thumb: #4b5563;
+    --scrollbar-track: transparent;
+  }
+
+  html {
+    @apply antialiased text-sm;
+  }
+
+  body {
+    @apply overflow-hidden;
+  }
+
+  /* スクロールバーのカスタマイズ */
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 hover:bg-slate-300 dark:bg-gray-600 dark:hover:bg-gray-500 transition-colors;
+  }
+}
+
 [data-tauri-drag-region] {
   cursor: move;
   user-select: none;
+}
+
+@layer components {
+  .input-field {
+    @apply w-full p-1.5 text-sm border rounded focus:border-indigo-400 dark:focus:border-indigo-500 outline-none transition-colors 
+    dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200;
+  }
+  
+  .btn {
+    @apply px-3 py-1 rounded text-sm font-medium focus:outline-none;
+  }
+  
+  .btn-primary {
+    @apply bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-700;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 p-3 transition-colors;
+  }
+  
+  .card-title {
+    @apply text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1 transition-colors;
+  }
 }

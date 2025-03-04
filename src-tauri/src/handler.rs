@@ -47,7 +47,7 @@ impl ConversionHandler {
 
 impl ConversionHandler {
     fn clipboard_has_owner(&mut self) -> bool {
-        unsafe { GetClipboardOwner() }.is_ok()
+        unsafe { GetClipboardOwner() }.0 != 0
     }
 
     fn tsf_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {

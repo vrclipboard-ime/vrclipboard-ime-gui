@@ -10,6 +10,7 @@ mod handler;
 mod transform_rule;
 mod tsf;
 mod tsf_conversion;
+mod tauri_emit_subscriber;
 
 use std::sync::Mutex;
 
@@ -21,7 +22,9 @@ use clipboard_master::Master;
 use com::Com;
 use config::Config;
 use handler::ConversionHandler;
-use tracing::Level;
+use tauri_emit_subscriber::TauriEmitSubscriber;
+use tracing::{instrument::WithSubscriber, level_filters::LevelFilter, Level};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Log {
@@ -56,9 +59,7 @@ fn save_settings(config: Config, state: State<AppState>) -> Result<(), String> {
 
 fn main() {
     println!("VRClipboard-IME Logs\nバグがあった場合はこのログを送ってください。");
-    tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
-        .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -73,6 +74,11 @@ fn main() {
             let _span = tracing::span!(tracing::Level::INFO, "main");
             app.manage(STATE.lock().unwrap().clone());
             let app_handle = app.app_handle().clone();
+
+            let registry = tracing_subscriber::registry().with(TauriEmitSubscriber {
+                app_handle: app_handle.clone(),
+            });
+            registry.init();
 
             std::thread::spawn(move || {
                 let _com = Com::new().unwrap();

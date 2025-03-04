@@ -3,8 +3,8 @@ use tracing::{debug, error, info};
 use windows::Win32::{
     System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
     UI::{
-        Input::KeyboardAndMouse::HKL,
         TextServices::{
+            HKL,
             CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr, GUID_TFCAT_TIP_KEYBOARD,
             TF_INPUTPROCESSORPROFILE, TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
             TF_PROFILETYPE_INPUTPROCESSOR,
