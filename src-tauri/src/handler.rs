@@ -12,7 +12,7 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::{CallbackResult, ClipboardHandler};
 use regex::Regex;
 use rosc::{encoder, OscMessage, OscPacket, OscType};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tracing::{error, info, warn};
 use windows::Win32::System::DataExchange::GetClipboardOwner;
 

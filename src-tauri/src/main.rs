@@ -1,5 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
-//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod com;
 mod config;
@@ -23,7 +23,6 @@ use com::Com;
 use config::Config;
 use handler::ConversionHandler;
 use tauri_emit_subscriber::TauriEmitSubscriber;
-use tracing::{instrument::WithSubscriber, level_filters::LevelFilter, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -58,8 +57,6 @@ fn save_settings(config: Config, state: State<AppState>) -> Result<(), String> {
 }
 
 fn main() {
-    println!("VRClipboard-IME Logs\nバグがあった場合はこのログを送ってください。");
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

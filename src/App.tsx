@@ -4,7 +4,8 @@ import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import TitleBar from "./TitleBar";
 import SettingsComponent from "./SettingsComponent";
-import { ThemeProvider, useTheme } from "./ThemeContext";
+import { ThemeProvider } from "./ThemeContext";
+import { LogProvider } from "./LogContext";
 import TerminalComponent from "./TerminalComponent";
 import AboutComponent from "./AboutComponent";
 
@@ -15,7 +16,6 @@ interface Log {
 }
 
 const AppContent = () => {
-  const { theme } = useTheme();
   const [logs, setLogs] = useState<Log[]>([]);
   const [activeMenuItem, setActiveMenuItem] = useState('home');
 
@@ -118,7 +118,9 @@ const AppContent = () => {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <LogProvider>
+        <AppContent />
+      </LogProvider>
     </ThemeProvider>
   );
 }

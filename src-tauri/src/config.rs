@@ -31,6 +31,8 @@ pub struct Config {
     pub use_tsf_reconvert: bool,
     #[serde(default = "bool_true")]
     pub skip_on_out_of_vrc: bool,
+    #[serde(default = "bool_false")]
+    pub tsf_announce: bool
 }
 
 impl Default for Config {
@@ -44,6 +46,7 @@ impl Default for Config {
             skip_url: true,
             use_tsf_reconvert: false,
             skip_on_out_of_vrc: true,
+            tsf_announce: false
         }
     }
 }
