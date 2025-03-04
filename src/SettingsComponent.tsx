@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { ChevronDown, Settings, Save, AlertCircle, Check } from 'lucide-react';
 
-interface Config {
+export interface Config {
   prefix: string;
   split: string;
   command: string;
@@ -11,9 +11,10 @@ interface Config {
   skip_url: boolean; 
   use_tsf_reconvert: boolean;
   skip_on_out_of_vrc: boolean;
+  tsf_announce?: boolean;
 }
 
-enum OnCopyMode {
+export enum OnCopyMode {
   ReturnToClipboard = 'ReturnToClipboard',
   ReturnToChatbox = 'ReturnToChatbox',
   SendDirectly = 'SendDirectly'
@@ -57,9 +58,10 @@ interface CheckboxFieldProps {
   label: React.ReactNode;
   checked: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
-const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked, onChange }) => (
+const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked, onChange, disabled }) => (
   <div className="mb-2">
     <div className="flex items-start">
       <div className="flex items-center h-4">
@@ -69,11 +71,16 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked,
           name={name}
           checked={checked}
           onChange={onChange}
-          className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 transition-colors"
+          disabled={disabled}
+          className={`h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 transition-colors ${
+            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         />
       </div>
       <div className="ml-2 text-xs">
-        <label htmlFor={id} className="text-gray-700 dark:text-gray-300 transition-colors">
+        <label htmlFor={id} className={`text-gray-700 dark:text-gray-300 transition-colors ${
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`}>
           {label}
         </label>
       </div>
@@ -81,7 +88,11 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked,
   </div>
 );
 
-const SettingsComponent: React.FC = () => {
+interface SettingsComponentProps {
+  setShowTsfModal: (show: boolean) => void;
+}
+
+const SettingsComponent: React.FC<SettingsComponentProps> = ({ setShowTsfModal }) => {
   const [settings, setSettings] = useState<Config>({
     prefix: ';',
     split: '/',
@@ -131,6 +142,30 @@ const SettingsComponent: React.FC = () => {
     const newSettings = {
       ...settings,
       [name]: type === 'checkbox' ? checked : value
+    };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleTsfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    
+    if (isChecked) {
+      try {
+        const available: boolean = await invoke('check_tsf_availability_command');
+        if (!available && setShowTsfModal) {
+          setShowTsfModal(true);
+          return;
+        }
+      } catch (error) {
+        return;
+      }
+    }
+
+    const { name, value, type } = e.target;
+    const newSettings = {
+      ...settings,
+      [name]: type === 'checkbox' ? isChecked : value
     };
     setSettings(newSettings);
     saveSettings(newSettings);
@@ -193,6 +228,7 @@ const SettingsComponent: React.FC = () => {
               label="区切り文字"
               value={settings.split}
               onChange={handleChange}
+              disabled={settings.use_tsf_reconvert}
               description="複数の変換モードを使いたい場合の区切り文字"
             />
             
@@ -201,6 +237,7 @@ const SettingsComponent: React.FC = () => {
               label="モード変更文字"
               value={settings.command}
               onChange={handleChange}
+              disabled={settings.use_tsf_reconvert}
               description="変換モードを変更するための文字"
             />
             
@@ -210,6 +247,7 @@ const SettingsComponent: React.FC = () => {
               label="無条件で変換"
               checked={settings.ignore_prefix}
               onChange={handleChange}
+              disabled={settings.use_tsf_reconvert}
             />
             
             <InputField
@@ -217,7 +255,7 @@ const SettingsComponent: React.FC = () => {
               label="開始文字"
               value={settings.prefix}
               onChange={handleChange}
-              disabled={settings.ignore_prefix}
+              disabled={settings.ignore_prefix || settings.use_tsf_reconvert}
               description="変換を開始する文字（無条件で変換がオンの場合は無効）"
             />
             
@@ -282,7 +320,7 @@ const SettingsComponent: React.FC = () => {
                   </span>
                 }
                 checked={settings.use_tsf_reconvert}
-                onChange={handleChange}
+                onChange={handleTsfChange}
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
                 Windows10/11では「以前のバージョンの Microsoft IME を使う」を有効化する必要があります。有効にすると区切り、モード変更、開始文字が無効化されます。

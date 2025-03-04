@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { List, Settings, Terminal, Bug, Info } from 'lucide-react';
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import TitleBar from "./TitleBar";
 import SettingsComponent from "./SettingsComponent";
@@ -8,6 +9,8 @@ import { ThemeProvider } from "./ThemeContext";
 import { LogProvider } from "./LogContext";
 import TerminalComponent from "./TerminalComponent";
 import AboutComponent from "./AboutComponent";
+import TsfSettingsModal from "./TsfSettingsModal";
+import { Config } from "./SettingsComponent";
 
 interface Log {
   time: string;
@@ -18,6 +21,9 @@ interface Log {
 const AppContent = () => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [activeMenuItem, setActiveMenuItem] = useState('home');
+  const [showTsfModal, setShowTsfModal] = useState(false);
+  const [currentSettings, setCurrentSettings] = useState<Config | null>(null);
+  const [isTsfAvailable, setIsTsfAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     const unlisten = listen<Log>('addLog', (event) => {
@@ -28,6 +34,40 @@ const AppContent = () => {
       unlisten.then(f => f());
     }
   }, []);
+
+  // TSF設定のチェック
+  useEffect(() => {
+    const checkTsfSettings = async () => {
+      try {
+        const settings: Config = await invoke('load_settings');
+        setCurrentSettings(settings);
+        
+        if (settings.use_tsf_reconvert) {
+          // TSF設定が有効な場合、TSFが利用可能か確認
+          const available: boolean = await invoke('check_tsf_availability_command');
+          setIsTsfAvailable(available);
+          
+          if (!available) {
+            setShowTsfModal(true);
+          }
+        }
+      } catch (error) {
+        console.error('TSF設定確認エラー:', error);
+      }
+    };
+    
+    checkTsfSettings();
+  }, []);
+
+  // 設定保存関数
+  const saveSettings = async (config: Config) => {
+    try {
+      await invoke('save_settings', { config });
+      setCurrentSettings(config);
+    } catch (error) {
+      console.error('設定保存エラー:', error);
+    }
+  };
 
   const renderLogEntry = (log: { time: string; original: string; converted: string }, index: number) => (
     <div key={index} className="mb-2 p-2 bg-white/90 dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 text-sm transition-colors">
@@ -79,7 +119,7 @@ const AppContent = () => {
           </div>
         );
       case 'settings':
-        return <SettingsComponent />;
+        return <SettingsComponent setShowTsfModal={setShowTsfModal} />;
       case 'terminal':
         return <TerminalComponent />;
       case 'about':
@@ -111,6 +151,16 @@ const AppContent = () => {
           {renderContent()}
         </div>
       </div>
+      
+      {/* TSF設定モーダル */}
+      {currentSettings && (
+        <TsfSettingsModal 
+          isOpen={showTsfModal}
+          onClose={() => setShowTsfModal(false)}
+          onSaveSettings={saveSettings}
+          currentSettings={currentSettings}
+        />
+      )}
     </div>
   );
 };

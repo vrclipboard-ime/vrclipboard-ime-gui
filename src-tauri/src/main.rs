@@ -11,6 +11,7 @@ mod transform_rule;
 mod tsf;
 mod tsf_conversion;
 mod tauri_emit_subscriber;
+mod tsf_availability;
 
 use std::sync::Mutex;
 
@@ -24,6 +25,8 @@ use config::Config;
 use handler::ConversionHandler;
 use tauri_emit_subscriber::TauriEmitSubscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tsf_availability::check_tsf_availability;
+use tracing::debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Log {
@@ -56,6 +59,27 @@ fn save_settings(config: Config, state: State<AppState>) -> Result<(), String> {
     config.save(state)
 }
 
+#[tauri::command]
+fn check_tsf_availability_command() -> Result<bool, String> {
+    debug!("Checking TSF availability");
+    match check_tsf_availability() {
+        Ok(result) => {
+            debug!("TSF availability check result: {}", result);
+            Ok(result)
+        },
+        Err(e) => Err(format!("Failed to check TSF availability: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn open_ms_settings_regionlanguage_jpnime() -> Result<(), String> {
+    let _ = std::process::Command::new("cmd")
+        .args(&["/C", "start", "ms-settings:regionlanguage-jpnime"])
+        .output()
+        .map_err(|e| format!("Failed to open MS Settings: {}", e))?;
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -66,7 +90,7 @@ fn main() {
                 Config::load().expect("Failed to load default config")
             })),
         })
-        .invoke_handler(tauri::generate_handler![load_settings, save_settings])
+        .invoke_handler(tauri::generate_handler![load_settings, save_settings, check_tsf_availability_command, open_ms_settings_regionlanguage_jpnime])
         .setup(|app| {
             let _span = tracing::span!(tracing::Level::INFO, "main");
             app.manage(STATE.lock().unwrap().clone());

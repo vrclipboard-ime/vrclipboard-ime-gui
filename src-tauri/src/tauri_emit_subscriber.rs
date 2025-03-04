@@ -52,6 +52,7 @@ where
             timestamp: format!("{}-{}-{} {}:{}:{}", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second()),
         };
 
+        println!("[{} {}] {} {}", event.timestamp, event.level, event.module_path, event.message);
         if self
             .app_handle
             .emit(
