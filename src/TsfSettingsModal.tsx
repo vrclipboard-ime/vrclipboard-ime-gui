@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import { AlertCircle, Settings, Check, X, ExternalLink } from 'lucide-react';
 import { Config } from './SettingsComponent';
@@ -9,14 +9,65 @@ interface TsfSettingsModalProps {
   onClose: () => void;
   onSaveSettings: (config: Config) => Promise<void>;
   currentSettings: Config;
+  onTsfEnabled?: () => void;
 }
 
 const TsfSettingsModal: React.FC<TsfSettingsModalProps> = ({
   isOpen,
   onClose,
   onSaveSettings,
-  currentSettings
+  currentSettings,
+  onTsfEnabled
 }) => {
+  const [checkingStatus, setCheckingStatus] = useState<'idle' | 'checking'>('idle');
+  
+  // TSFが利用可能かどうかを定期的にチェックする
+  useEffect(() => {
+    if (!isOpen) return; // モーダルが閉じている場合は処理しない
+    
+    let intervalId: number | null = null;
+    
+    const checkTsfAvailability = async () => {
+      try {
+        const available: boolean = await invoke('check_tsf_availability_command');
+        
+        if (available) {
+          // TSFが利用可能になったら
+          const newSettings = { ...currentSettings, use_tsf_reconvert: true };
+          await onSaveSettings(newSettings);
+          
+          // 成功コールバックを呼び出し
+          if (onTsfEnabled) {
+            onTsfEnabled();
+          }
+          
+          // モーダルを閉じる
+          onClose();
+          
+          // インターバルをクリア
+          if (intervalId !== null) {
+            clearInterval(intervalId);
+          }
+        }
+      } catch (error) {
+        console.error('TSF利用可能性チェックに失敗しました:', error);
+      }
+    };
+    
+    // 初回チェック
+    checkTsfAvailability();
+    
+    // 1秒ごとにチェック（標準的なsetIntervalを使用）
+    intervalId = window.setInterval(checkTsfAvailability, 1000);
+    
+    // クリーンアップ関数
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isOpen, currentSettings, onSaveSettings, onClose, onTsfEnabled]);
+
   if (!isOpen) return null;
 
   const openWindowsSettings = async () => {
@@ -88,6 +139,10 @@ const TsfSettingsModal: React.FC<TsfSettingsModalProps> = ({
             レガシー変換を使用
             <span className="text-xs text-red-500 ml-1.5">(機能制限あり)</span>
           </button>
+        </div>
+        
+        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+          設定が完了すると、このウィンドウは自動的に閉じます
         </div>
       </div>
     </div>

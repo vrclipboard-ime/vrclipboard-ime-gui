@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { List, Settings, Terminal, Bug, Info } from 'lucide-react';
+import { List, Settings, Terminal, Bug, Info, Check, Book } from 'lucide-react';
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
@@ -11,6 +11,7 @@ import TerminalComponent from "./TerminalComponent";
 import AboutComponent from "./AboutComponent";
 import TsfSettingsModal from "./TsfSettingsModal";
 import { Config } from "./SettingsComponent";
+import DictionaryComponent from "./DictionaryComponent";
 
 interface Log {
   time: string;
@@ -24,6 +25,7 @@ const AppContent = () => {
   const [showTsfModal, setShowTsfModal] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Config | null>(null);
   const [isTsfAvailable, setIsTsfAvailable] = useState<boolean | null>(null);
+  const [showTsfSuccessMessage, setShowTsfSuccessMessage] = useState(false);
 
   useEffect(() => {
     const unlisten = listen<Log>('addLog', (event) => {
@@ -119,11 +121,17 @@ const AppContent = () => {
           </div>
         );
       case 'settings':
-        return <SettingsComponent setShowTsfModal={setShowTsfModal} />;
+        return <SettingsComponent 
+          setShowTsfModal={setShowTsfModal} 
+          currentSettings={currentSettings}
+          onSaveSettings={saveSettings}
+        />;
       case 'terminal':
         return <TerminalComponent />;
       case 'about':
         return <AboutComponent />;
+      case 'dictionary':
+        return <DictionaryComponent />;
       default:
         return null;
     }
@@ -138,6 +146,7 @@ const AppContent = () => {
           <div className="space-y-1 flex-grow">
             <MenuItem icon={<List size={16} />} label="ログ" id="home" />
             <MenuItem icon={<Settings size={16} />} label="設定" id="settings" />
+            <MenuItem icon={<Book size={16} />} label="辞書" id="dictionary" />
           </div>
           {/* 下側にデバッグタブを配置 */}
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
@@ -159,7 +168,24 @@ const AppContent = () => {
           onClose={() => setShowTsfModal(false)}
           onSaveSettings={saveSettings}
           currentSettings={currentSettings}
+          onTsfEnabled={() => {
+            setShowTsfSuccessMessage(true);
+            setTimeout(() => setShowTsfSuccessMessage(false), 5000); // 5秒後に非表示
+          }}
         />
+      )}
+      
+      {/* TSF有効化成功メッセージ */}
+      {showTsfSuccessMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded shadow-lg flex items-center">
+          <div className="mr-3 text-green-500 dark:text-green-400">
+            <Check size={20} />
+          </div>
+          <div>
+            <p className="font-medium text-sm">TSF再変換が有効化されました</p>
+            <p className="text-xs text-green-700 dark:text-green-300">文字変換機能が拡張されました</p>
+          </div>
+        </div>
       )}
     </div>
   );

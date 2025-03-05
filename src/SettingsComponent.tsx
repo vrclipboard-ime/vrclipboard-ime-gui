@@ -90,9 +90,15 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked,
 
 interface SettingsComponentProps {
   setShowTsfModal: (show: boolean) => void;
+  currentSettings: Config | null;
+  onSaveSettings: (config: Config) => Promise<void>;
 }
 
-const SettingsComponent: React.FC<SettingsComponentProps> = ({ setShowTsfModal }) => {
+const SettingsComponent: React.FC<SettingsComponentProps> = ({ 
+  setShowTsfModal,
+  currentSettings,
+  onSaveSettings
+}) => {
   const [settings, setSettings] = useState<Config>({
     prefix: ';',
     split: '/',
@@ -115,6 +121,13 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ setShowTsfModal }
     };
   }, []);
 
+  // 親コンポーネントから新しい設定が渡されたら更新する
+  useEffect(() => {
+    if (currentSettings) {
+      setSettings(currentSettings);
+    }
+  }, [currentSettings]);
+
   const loadSettings = async () => {
     try {
       const loadedSettings: Config = await invoke('load_settings');
@@ -127,7 +140,12 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({ setShowTsfModal }
   const saveSettings = async (newSettings: Config) => {
     setSaveStatus('saving');
     try {
-      await invoke('save_settings', { config: newSettings });
+      if (onSaveSettings) {
+        await onSaveSettings(newSettings);
+      } else {
+        // 後方互換性のために残す
+        await invoke('save_settings', { config: newSettings });
+      }
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (error) {

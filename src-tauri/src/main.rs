@@ -12,6 +12,7 @@ mod tsf;
 mod tsf_conversion;
 mod tauri_emit_subscriber;
 mod tsf_availability;
+mod dictionary;
 
 use std::sync::Mutex;
 
@@ -27,6 +28,7 @@ use tauri_emit_subscriber::TauriEmitSubscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use tsf_availability::check_tsf_availability;
 use tracing::debug;
+use dictionary::Dictionary;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Log {
@@ -37,9 +39,11 @@ struct Log {
 
 struct AppState {
     config: Mutex<Config>,
+    dictionary: Mutex<Dictionary>,
 }
 
 static STATE: Lazy<Mutex<Config>> = Lazy::new(|| Mutex::new(Config::load().unwrap()));
+static DICTIONARY: Lazy<Mutex<Dictionary>> = Lazy::new(|| Mutex::new(Dictionary::load().unwrap()));
 
 #[tauri::command]
 fn load_settings(state: State<AppState>) -> Result<Config, String> {
@@ -72,6 +76,24 @@ fn check_tsf_availability_command() -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn load_dictionary(state: State<AppState>) -> Result<Dictionary, String> {
+    match Dictionary::load() {
+        Ok(dictionary) => {
+            let mut app_dictionary = state.dictionary.lock().unwrap();
+            *app_dictionary = dictionary.clone();
+            Ok(dictionary)
+        }
+        Err(e) => Err(format!("Failed to load dictionary: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn save_dictionary(dictionary: Dictionary, state: State<AppState>) -> Result<(), String> {
+    *DICTIONARY.lock().unwrap() = dictionary.clone();
+    dictionary.save(state).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_ms_settings_regionlanguage_jpnime() -> Result<(), String> {
     let _ = std::process::Command::new("cmd")
         .args(&["/C", "start", "ms-settings:regionlanguage-jpnime"])
@@ -89,11 +111,16 @@ fn main() {
                 Config::generate_default_config().expect("Failed to generate default config");
                 Config::load().expect("Failed to load default config")
             })),
+            dictionary: Mutex::new(Dictionary::load().unwrap_or_else(|_| {
+                Dictionary::generate_default_dictionary().expect("Failed to generate default dictionary");
+                Dictionary::load().expect("Failed to load default dictionary")
+            })),
         })
-        .invoke_handler(tauri::generate_handler![load_settings, save_settings, check_tsf_availability_command, open_ms_settings_regionlanguage_jpnime])
+        .invoke_handler(tauri::generate_handler![load_settings, save_settings, check_tsf_availability_command, open_ms_settings_regionlanguage_jpnime, load_dictionary, save_dictionary])
         .setup(|app| {
             let _span = tracing::span!(tracing::Level::INFO, "main");
             app.manage(STATE.lock().unwrap().clone());
+            app.manage(DICTIONARY.lock().unwrap().clone());
             let app_handle = app.app_handle().clone();
 
             let registry = tracing_subscriber::registry().with(TauriEmitSubscriber {
