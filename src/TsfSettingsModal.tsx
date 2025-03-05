@@ -57,7 +57,7 @@ const TsfSettingsModal: React.FC<TsfSettingsModalProps> = ({
     // 初回チェック
     checkTsfAvailability();
     
-    // 1秒ごとにチェック（標準的なsetIntervalを使用）
+    // 1秒ごとにチェック
     intervalId = window.setInterval(checkTsfAvailability, 1000);
     
     // クリーンアップ関数
