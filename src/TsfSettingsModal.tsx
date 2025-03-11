@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { open } from '@tauri-apps/plugin-shell';
-import { AlertCircle, Settings, Check, X, ExternalLink } from 'lucide-react';
+import { AlertCircle, Settings, Check, X } from 'lucide-react';
 import { Config } from './SettingsComponent';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -19,7 +18,7 @@ const TsfSettingsModal: React.FC<TsfSettingsModalProps> = ({
   currentSettings,
   onTsfEnabled
 }) => {
-  const [checkingStatus, setCheckingStatus] = useState<'idle' | 'checking'>('idle');
+  const [_checkingStatus, _setCheckingStatus] = useState<'idle' | 'checking'>('idle');
   
   // TSFが利用可能かどうかを定期的にチェックする
   useEffect(() => {

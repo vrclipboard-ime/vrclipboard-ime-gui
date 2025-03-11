@@ -334,7 +334,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                 name="use_tsf_reconvert"
                 label={
                   <span>
-                    <span className="text-indigo-600 dark:text-indigo-400 font-medium transition-colors">ベータ機能:</span> TSF再変換を使用
+                    <span className="text-indigo-600 dark:text-indigo-400 font-medium transition-colors">TSF再変換を使用</span>
                   </span>
                 }
                 checked={settings.use_tsf_reconvert}

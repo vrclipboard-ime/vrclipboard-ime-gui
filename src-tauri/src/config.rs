@@ -27,7 +27,7 @@ pub struct Config {
     pub on_copy_mode: OnCopyMode,
     #[serde(default = "bool_true")]
     pub skip_url: bool,
-    #[serde(default = "bool_false")]
+    #[serde(default = "bool_true")]
     pub use_tsf_reconvert: bool,
     #[serde(default = "bool_true")]
     pub skip_on_out_of_vrc: bool,
@@ -44,7 +44,7 @@ impl Default for Config {
             ignore_prefix: true,
             on_copy_mode: OnCopyMode::ReturnToChatbox,
             skip_url: true,
-            use_tsf_reconvert: false,
+            use_tsf_reconvert: true,
             skip_on_out_of_vrc: true,
             tsf_announce: false
         }
@@ -95,7 +95,11 @@ impl Config {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         trace!("Raw config contents: {}", contents);
-        let config: Config = serde_yaml::from_str(&contents)?;
+        let mut config: Config = serde_yaml::from_str(&contents)?;
+        if !config.tsf_announce {
+            config.use_tsf_reconvert = true;
+            config.tsf_announce = true;
+        }
         debug!("Config loaded successfully");
         Ok(config)
     }

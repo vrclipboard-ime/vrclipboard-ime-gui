@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { List, Settings, Terminal, Bug, Info, Check, Book } from 'lucide-react';
+import { List, Settings, Terminal, Bug, Info, Check } from 'lucide-react';
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
@@ -24,7 +24,7 @@ const AppContent = () => {
   const [activeMenuItem, setActiveMenuItem] = useState('home');
   const [showTsfModal, setShowTsfModal] = useState(false);
   const [currentSettings, setCurrentSettings] = useState<Config | null>(null);
-  const [isTsfAvailable, setIsTsfAvailable] = useState<boolean | null>(null);
+  const [_isTsfAvailable, setIsTsfAvailable] = useState<boolean | null>(null);
   const [showTsfSuccessMessage, setShowTsfSuccessMessage] = useState(false);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const AppContent = () => {
           <div className="space-y-1 flex-grow">
             <MenuItem icon={<List size={16} />} label="ログ" id="home" />
             <MenuItem icon={<Settings size={16} />} label="設定" id="settings" />
-            <MenuItem icon={<Book size={16} />} label="辞書" id="dictionary" />
+            {/*<MenuItem icon={<Book size={16} />} label="辞書" id="dictionary" />*/}
           </div>
           {/* 下側にデバッグタブを配置 */}
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Book, Save, Plus, Trash, ChevronUp, ChevronDown, AlertCircle, Check, Edit, AlignLeft, Info, X } from 'lucide-react';
+import { Book, Save, Plus, Trash, ChevronUp, ChevronDown, AlertCircle, Check, Edit, AlignLeft, X } from 'lucide-react';
 import { 
   Dictionary, 
   DictionaryEntry, 
@@ -12,16 +12,136 @@ import {
   convertFromRustEntry
 } from './types/dictionary';
 
+// 入力フィールド用の内部コンポーネント（フォーカスを保持するため）
+const InputField: React.FC<{
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  inputRef?: React.RefObject<HTMLInputElement>;
+}> = ({ label, value, placeholder, onChange, inputRef }) => {
+  // ローカルステートで値を管理
+  const [localValue, setLocalValue] = useState(value);
+  
+  // 親から渡された値が変わったらローカルステートを更新
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    onChange(newValue);
+  };
+  
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <input
+        ref={inputRef}
+        type="text"
+        value={localValue}
+        onChange={handleChange}
+        className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:border-indigo-400 outline-none"
+        placeholder={placeholder}
+      />
+    </div>
+  );
+};
+
+// 数値入力フィールド用のコンポーネント
+const NumberField: React.FC<{
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  description?: string;
+}> = ({ label, value, onChange, description }) => {
+  // ローカルステートで値を管理
+  const [localValue, setLocalValue] = useState(value.toString());
+  
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    onChange(parseInt(newValue) || 0);
+  };
+  
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <input
+        type="number"
+        value={localValue}
+        onChange={handleChange}
+        className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:border-indigo-400 outline-none"
+        min="0"
+      />
+      {description && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {description}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// チェックボックス用のコンポーネント
+const CheckboxField: React.FC<{
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}> = ({ id, label, checked, onChange }) => {
+  // ローカルステートで値を管理
+  const [isChecked, setIsChecked] = useState(checked);
+  
+  useEffect(() => {
+    setIsChecked(checked);
+  }, [checked]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setIsChecked(newValue);
+    onChange(newValue);
+  };
+  
+  return (
+    <div className="flex items-center mt-1.5">
+      <input
+        type="checkbox"
+        id={id}
+        checked={isChecked}
+        onChange={handleChange}
+        className="h-3.5 w-3.5 text-indigo-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+      />
+      <label htmlFor={id} className="ml-2 text-xs text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+    </div>
+  );
+};
+
 const DictionaryComponent: React.FC = () => {
   const [dictionary, setDictionary] = useState<Dictionary>({ entries: [] });
-  const [selectedEntry, setSelectedEntry] = useState<DictionaryEntry | null>(null);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [isMethodDropdownOpen, setIsMethodDropdownOpen] = useState(false);
   const [isConverterDropdownOpen, setIsConverterDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-
+  
+  // 編集中のエントリを更新するためのフォースレンダリング用state
+  const [, forceUpdate] = useState({});
+  
+  // Refを使って値を保持
+  const entryRef = useRef<DictionaryEntry | null>(null);
+  
   const methodDropdownRef = useRef<HTMLDivElement>(null);
   const converterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -86,17 +206,19 @@ const DictionaryComponent: React.FC = () => {
   };
 
   const handleAddEntry = () => {
-    setSelectedEntry(getDefaultDictionaryEntry());
+    entryRef.current = getDefaultDictionaryEntry();
     setEditIndex(null);
-    setIsEditing(true);
     setShowDialog(true);
+    // 強制的に再レンダリング
+    forceUpdate({});
   };
 
   const handleEditEntry = (entry: DictionaryEntry, index: number) => {
-    setSelectedEntry({...entry});
+    entryRef.current = {...entry};
     setEditIndex(index);
-    setIsEditing(true);
     setShowDialog(true);
+    // 強制的に再レンダリング
+    forceUpdate({});
   };
 
   const handleDeleteEntry = (index: number) => {
@@ -108,34 +230,41 @@ const DictionaryComponent: React.FC = () => {
   };
 
   const handleSaveEntry = () => {
-    if (!selectedEntry) return;
+    if (!entryRef.current) return;
     
     const newEntries = [...dictionary.entries];
     
     // 新規追加の場合
     if (editIndex === null) {
-      newEntries.push(selectedEntry);
+      newEntries.push(entryRef.current);
     } else {
       // 編集の場合
-      newEntries[editIndex] = selectedEntry;
+      newEntries[editIndex] = entryRef.current;
     }
     
     const newDict = { ...dictionary, entries: newEntries };
     setDictionary(newDict);
     saveDictionary(newDict);
+    
+    // ダイアログを閉じて状態をリセット
+    closeDialog();
+  };
+  
+  const closeDialog = () => {
     setShowDialog(false);
-    setIsEditing(false);
-    setSelectedEntry(null);
+    setIsMethodDropdownOpen(false);
+    setIsConverterDropdownOpen(false);
+    entryRef.current = null;
   };
 
   const handleChangePriority = (index: number, direction: 'up' | 'down') => {
     if (dictionary.entries.length <= 1) return;
     
     const newEntries = [...dictionary.entries];
-    const entry = newEntries[index];
+    const entry = {...newEntries[index]};
     
     if (direction === 'up' && index > 0) {
-      const prevEntry = newEntries[index - 1];
+      const prevEntry = {...newEntries[index - 1]};
       const tempPriority = prevEntry.priority;
       prevEntry.priority = entry.priority;
       entry.priority = tempPriority;
@@ -144,7 +273,7 @@ const DictionaryComponent: React.FC = () => {
       newEntries[index] = prevEntry;
       newEntries[index - 1] = entry;
     } else if (direction === 'down' && index < newEntries.length - 1) {
-      const nextEntry = newEntries[index + 1];
+      const nextEntry = {...newEntries[index + 1]};
       const tempPriority = nextEntry.priority;
       nextEntry.priority = entry.priority;
       entry.priority = tempPriority;
@@ -159,10 +288,15 @@ const DictionaryComponent: React.FC = () => {
     saveDictionary(newDict);
   };
 
-  const handleChangeEntryField = (field: keyof DictionaryEntry, value: any) => {
-    if (!selectedEntry) return;
+  // 入力フィールドの値を更新（フォーカスを失わないようRef経由で更新）
+  const handleChangeEntryField = <K extends keyof DictionaryEntry>(field: K, value: DictionaryEntry[K]) => {
+    if (!entryRef.current) return;
     
-    const updatedEntry = { ...selectedEntry, [field]: value };
+    // RefのDictionaryEntryをディープコピー
+    const updatedEntry = { ...entryRef.current };
+    
+    // フィールドの値を更新
+    updatedEntry[field] = value as DictionaryEntry[K];
     
     // 変換方法がReplace以外の場合はoutputをnullに
     if (field === 'method' && value !== ConversionMethod.Replace) {
@@ -174,7 +308,13 @@ const DictionaryComponent: React.FC = () => {
       updatedEntry.converter_char = 'r';
     }
     
-    setSelectedEntry(updatedEntry);
+    // 更新したEntryをRefに保存
+    entryRef.current = updatedEntry;
+    
+    // UIを強制的に更新（ドロップダウンメニュー表示/非表示の対応のため）
+    if (field === 'method' || field === 'converter_char') {
+      forceUpdate({});
+    }
   };
 
   const handleSelectMethod = (method: ConversionMethod) => {
@@ -219,7 +359,9 @@ const DictionaryComponent: React.FC = () => {
 
   // 辞書エントリダイアログ
   const EntryDialog = () => {
-    if (!showDialog || !selectedEntry) return null;
+    if (!showDialog || !entryRef.current) return null;
+    
+    const entry = entryRef.current;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -229,13 +371,7 @@ const DictionaryComponent: React.FC = () => {
               {editIndex !== null ? '辞書エントリの編集' : '新しい辞書エントリ'}
             </h3>
             <button 
-              onClick={() => {
-                setShowDialog(false);
-                setIsEditing(false);
-                setSelectedEntry(null);
-                setIsMethodDropdownOpen(false);
-                setIsConverterDropdownOpen(false);
-              }} 
+              onClick={closeDialog} 
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <X size={20} />
@@ -243,41 +379,29 @@ const DictionaryComponent: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                変換対象文字列
-              </label>
-              <input
-                type="text"
-                value={selectedEntry.input}
-                onChange={(e) => handleChangeEntryField('input', e.target.value)}
-                className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:border-indigo-400 outline-none"
-                placeholder="例: こんにちは"
-              />
-              <div className="flex items-center mt-1.5">
-                <input
-                  type="checkbox"
-                  id="use_regex"
-                  checked={selectedEntry.use_regex}
-                  onChange={(e) => handleChangeEntryField('use_regex', e.target.checked)}
-                  className="h-3.5 w-3.5 text-indigo-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
-                />
-                <label htmlFor="use_regex" className="ml-2 text-xs text-gray-700 dark:text-gray-300">
-                  正規表現を使用
-                </label>
-              </div>
-            </div>
+            <InputField 
+              label="変換対象文字列"
+              value={entry.input}
+              placeholder="例: こんにちは"
+              onChange={(value) => handleChangeEntryField('input', value)}
+            />
             
-            <div className="relative mb-3">
+            <CheckboxField
+              id="use_regex"
+              label="正規表現を使用"
+              checked={entry.use_regex}
+              onChange={(checked) => handleChangeEntryField('use_regex', checked)}
+            />
+            
+            <div className="relative mb-3" ref={methodDropdownRef}>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 変換方法
               </label>
               <div
-                ref={methodDropdownRef}
                 className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 flex justify-between items-center cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
                 onClick={() => setIsMethodDropdownOpen(!isMethodDropdownOpen)}
               >
-                <span>{getMethodLabel(selectedEntry.method as ConversionMethod, selectedEntry.converter_char)}</span>
+                <span>{getMethodLabel(entry.method as ConversionMethod, entry.converter_char)}</span>
                 <ChevronDown size={14} className={`transition-transform ${isMethodDropdownOpen ? 'transform rotate-180' : ''}`} />
               </div>
               {isMethodDropdownOpen && (
@@ -286,9 +410,9 @@ const DictionaryComponent: React.FC = () => {
                     className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 cursor-pointer"
                     onClick={() => handleSelectMethod(ConversionMethod.Replace)}
                   >
-                    <div className={`flex items-center ${selectedEntry.method === ConversionMethod.Replace ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
-                      {selectedEntry.method === ConversionMethod.Replace && <Check size={12} className="mr-1.5" />}
-                      <span className={selectedEntry.method === ConversionMethod.Replace ? 'ml-0' : 'ml-4'}>
+                    <div className={`flex items-center ${entry.method === ConversionMethod.Replace ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
+                      {entry.method === ConversionMethod.Replace && <Check size={12} className="mr-1.5" />}
+                      <span className={entry.method === ConversionMethod.Replace ? 'ml-0' : 'ml-4'}>
                         置き換え
                       </span>
                     </div>
@@ -297,9 +421,9 @@ const DictionaryComponent: React.FC = () => {
                     className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 cursor-pointer"
                     onClick={() => handleSelectMethod(ConversionMethod.None)}
                   >
-                    <div className={`flex items-center ${selectedEntry.method === ConversionMethod.None ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
-                      {selectedEntry.method === ConversionMethod.None && <Check size={12} className="mr-1.5" />}
-                      <span className={selectedEntry.method === ConversionMethod.None ? 'ml-0' : 'ml-4'}>
+                    <div className={`flex items-center ${entry.method === ConversionMethod.None ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
+                      {entry.method === ConversionMethod.None && <Check size={12} className="mr-1.5" />}
+                      <span className={entry.method === ConversionMethod.None ? 'ml-0' : 'ml-4'}>
                         無変換
                       </span>
                     </div>
@@ -308,9 +432,9 @@ const DictionaryComponent: React.FC = () => {
                     className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 cursor-pointer"
                     onClick={() => handleSelectMethod(ConversionMethod.Converter)}
                   >
-                    <div className={`flex items-center ${selectedEntry.method === ConversionMethod.Converter ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
-                      {selectedEntry.method === ConversionMethod.Converter && <Check size={12} className="mr-1.5" />}
-                      <span className={selectedEntry.method === ConversionMethod.Converter ? 'ml-0' : 'ml-4'}>
+                    <div className={`flex items-center ${entry.method === ConversionMethod.Converter ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
+                      {entry.method === ConversionMethod.Converter && <Check size={12} className="mr-1.5" />}
+                      <span className={entry.method === ConversionMethod.Converter ? 'ml-0' : 'ml-4'}>
                         変換
                       </span>
                     </div>
@@ -319,19 +443,18 @@ const DictionaryComponent: React.FC = () => {
               )}
             </div>
             
-            {selectedEntry.method === ConversionMethod.Converter && (
-              <div className="relative mb-3">
+            {entry.method === ConversionMethod.Converter && (
+              <div className="relative mb-3" ref={converterDropdownRef}>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   変換器
                 </label>
                 <div
-                  ref={converterDropdownRef}
                   className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 flex justify-between items-center cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
                   onClick={() => setIsConverterDropdownOpen(!isConverterDropdownOpen)}
                 >
                   <span>
-                    {selectedEntry.converter_char 
-                      ? getConverterInfo(selectedEntry.converter_char)?.name || 'ローマ字→漢字'
+                    {entry.converter_char 
+                      ? getConverterInfo(entry.converter_char)?.name || 'ローマ字→漢字'
                       : 'ローマ字→漢字'}
                   </span>
                   <ChevronDown size={14} className={`transition-transform ${isConverterDropdownOpen ? 'transform rotate-180' : ''}`} />
@@ -344,9 +467,9 @@ const DictionaryComponent: React.FC = () => {
                         className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 cursor-pointer"
                         onClick={() => handleSelectConverter(converter.id)}
                       >
-                        <div className={`flex items-center ${selectedEntry.converter_char === converter.id ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
-                          {selectedEntry.converter_char === converter.id && <Check size={12} className="mr-1.5" />}
-                          <span className={selectedEntry.converter_char === converter.id ? 'ml-0' : 'ml-4'}>
+                        <div className={`flex items-center ${entry.converter_char === converter.id ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'dark:text-gray-300'}`}>
+                          {entry.converter_char === converter.id && <Check size={12} className="mr-1.5" />}
+                          <span className={entry.converter_char === converter.id ? 'ml-0' : 'ml-4'}>
                             {converter.name} - {converter.description}
                           </span>
                         </div>
@@ -357,47 +480,26 @@ const DictionaryComponent: React.FC = () => {
               </div>
             )}
             
-            {selectedEntry.method === ConversionMethod.Replace && (
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  置き換え後の文字列
-                </label>
-                <input
-                  type="text"
-                  value={selectedEntry.output || ''}
-                  onChange={(e) => handleChangeEntryField('output', e.target.value)}
-                  className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:border-indigo-400 outline-none"
-                  placeholder="例: Hello"
-                />
-              </div>
+            {entry.method === ConversionMethod.Replace && (
+              <InputField
+                label="置き換え後の文字列"
+                value={entry.output || ''}
+                placeholder="例: Hello"
+                onChange={(value) => handleChangeEntryField('output', value)}
+              />
             )}
             
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                優先順位
-              </label>
-              <input
-                type="number"
-                value={selectedEntry.priority}
-                onChange={(e) => handleChangeEntryField('priority', parseInt(e.target.value) || 0)}
-                className="w-full p-1.5 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:border-indigo-400 outline-none"
-                min="0"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                数値が大きいほど優先度が高くなります。
-              </p>
-            </div>
+            <NumberField
+              label="優先順位"
+              value={entry.priority}
+              onChange={(value) => handleChangeEntryField('priority', value)}
+              description="数値が大きいほど優先度が高くなります。"
+            />
           </div>
           
           <div className="mt-6 flex justify-end">
             <button
-              onClick={() => {
-                setShowDialog(false);
-                setIsEditing(false);
-                setSelectedEntry(null);
-                setIsMethodDropdownOpen(false);
-                setIsConverterDropdownOpen(false);
-              }}
+              onClick={closeDialog}
               className="mr-2 px-3 py-1.5 rounded text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
             >
               キャンセル
@@ -417,6 +519,7 @@ const DictionaryComponent: React.FC = () => {
   return (
     <div className="h-full">
       <div className="flex items-center justify-between mb-2">
+        
         <h2 className="text-base font-medium text-gray-700 dark:text-gray-200 flex items-center transition-colors">
           <Book size={16} className="mr-1.5" />
           辞書
@@ -432,6 +535,7 @@ const DictionaryComponent: React.FC = () => {
           </button>
         </div>
       </div>
+
 
       <div className="bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 p-3 transition-colors">
         {dictionary.entries.length > 0 ? (

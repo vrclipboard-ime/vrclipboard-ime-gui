@@ -79,7 +79,7 @@ const TitleBar = () => {
     >
       <div className="flex items-center" data-tauri-drag-region>
         <span className="text-xs font-medium" data-tauri-drag-region>VRClipboard-IME</span>
-        <span className="text-xs opacity-80 ml-1" data-tauri-drag-region>v1.10.0</span>
+        <span className="text-xs opacity-80 ml-1" data-tauri-drag-region>v1.11.0</span>
       </div>
       <div className="flex">
         <TitleButton 

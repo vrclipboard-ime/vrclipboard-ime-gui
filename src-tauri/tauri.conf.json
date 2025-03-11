@@ -24,14 +24,17 @@
   },
   "productName": "vrclipboard-ime-gui",
   "mainBinaryName": "vrclipboard-ime-gui",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "identifier": "dev.mii.vrclipboard-ime",
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5QTI2MDRDNTlENUY5OEMKUldTTStkVlpUR0NpcVIrMXZqOHFpNzNXMFVKT0d3aHJIWFlOUVJubGN5VTAzUkVwYW95bVlMYUQK",
       "endpoints": [
         "https://r2-vrime.mii.dev/release.json"
-      ]
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   },
   "app": {

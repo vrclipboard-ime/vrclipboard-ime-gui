@@ -30,7 +30,7 @@ const AboutComponent: React.FC = () => {
             <div className="text-sm">
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">バージョン:</span>
-                <span className="text-gray-600 dark:text-gray-400">1.10.0</span>
+                <span className="text-gray-600 dark:text-gray-400">1.11.0</span>
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">ライセンス:</span>
@@ -38,7 +38,7 @@ const AboutComponent: React.FC = () => {
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">最終更新:</span>
-                <span className="text-gray-600 dark:text-gray-400">2025年2月</span>
+                <span className="text-gray-600 dark:text-gray-400">2025年3月11日</span>
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">技術:</span>

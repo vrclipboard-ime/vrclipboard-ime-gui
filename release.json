@@ -1,7 +1,7 @@
 {
-  "url": "https://r2-vrime.mii.dev/releases/vrclipboard-ime-gui_1.9.0_x64_ja-JP.msi.zip",
-  "version": "1.9.0",
-  "notes": "VRChat外でコピーした文字列の変換をスキップする機能の実装",
-  "pub_date": "2024-09-27T12:18:27+00:00",
-  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTTStkVlpUR0NpcVdBalVrbUpDcDdac3NhSFhMZFZGbW90STNOYnJNVVhzZkdFQ0t3TzVTMkRoUkhQQVI1RnVHR2xSdUNYL0ttS0NTWW1OcFMyS2NtaGoybmZmdjU5TUFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzI3NDM5Mjk5CWZpbGU6dnJjbGlwYm9hcmQtaW1lLWd1aV8xLjkuMF94NjRfamEtSlAubXNpLnppcAp6QTNXc2hGbXNaRU1PdVA3L1FHOVBrU2wvOE1HZGFpL3h6K2lSa3Buby9Jbnc0VTVnaGMrR2tQOHVOUHVHa1A3b1FmZmVUQlJZYk9WY3hmL3dteVZEZz09Cg=="
+  "url": "https://r2-vrime.mii.dev/releases/vrclipboard-ime-gui_1.11.0_x64_ja-JP.msi.zip",
+  "version": "1.11.0",
+  "notes": "UIの変更, TSF再変換機能の正式リリース",
+  "pub_date": "2025-03-11T19:14:02+09:00",
+  "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTTStkVlpUR0NpcVcvYitzcmhYakFkOTBWZVo5RHFwVk9xbjdzNlg3VHMrZ3NBaHpxS2VacEg4ckE3V3ZZSGZETzFyZE1Qc0JoRTltUGhvREdsUzF2Ry91c2RtWnlqOXdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzQxNjg4MzA3CWZpbGU6dnJjbGlwYm9hcmQtaW1lLWd1aV8xLjExLjBfeDY0X2phLUpQLm1zaS56aXAKVWt0b0t5YkR5MlczM1FRYXV2THRHYjQwWVFxRGR2OW1KTExJNGFpeGcyN2k2Q1hrU3Yrb3dxU3NvY2FLNTk4bDd1Q1lFanpaQktIM0UxdTBzNmd3Q3c9PQo="
 }
