@@ -14,20 +14,21 @@ mod tauri_emit_subscriber;
 mod tsf_availability;
 mod dictionary;
 
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 use clipboard_master::Master;
 use com::Com;
 use config::Config;
 use handler::ConversionHandler;
 use tauri_emit_subscriber::TauriEmitSubscriber;
+use tauri_plugin_updater::UpdaterExt;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use tsf_availability::check_tsf_availability;
-use tracing::debug;
+use tracing::{debug, error};
 use dictionary::Dictionary;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -44,6 +45,7 @@ struct AppState {
 
 static STATE: Lazy<Mutex<Config>> = Lazy::new(|| Mutex::new(Config::load().unwrap()));
 static DICTIONARY: Lazy<Mutex<Dictionary>> = Lazy::new(|| Mutex::new(Dictionary::load().unwrap()));
+static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
 #[tauri::command]
 fn load_settings(state: State<AppState>) -> Result<Config, String> {
@@ -102,6 +104,29 @@ fn open_ms_settings_regionlanguage_jpnime() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn check_update() -> Result<bool, String> {
+    if let Some(app_handle) = APP_HANDLE.get() {
+        match app_handle.updater() {
+            Ok(updater) => match updater.check().await {
+                Ok(Some(_)) => Ok(true),
+                Ok(None) => Ok(false),
+                Err(e) => {
+                    error!("Failed to check for updates: {}", e);
+                    Err(format!("Failed to check for updates: {}", e))
+                },
+            },
+            Err(e) => {
+                error!("Updater not available: {}", e);
+                Err("Updater not available".to_string())
+            }
+        }
+    } else {
+        error!("App handle not set");
+        Err("App handle not set".to_string())
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -116,8 +141,18 @@ fn main() {
                 Dictionary::load().expect("Failed to load default dictionary")
             })),
         })
-        .invoke_handler(tauri::generate_handler![load_settings, save_settings, check_tsf_availability_command, open_ms_settings_regionlanguage_jpnime, load_dictionary, save_dictionary])
+        .invoke_handler(tauri::generate_handler![
+            load_settings, 
+            save_settings, 
+            check_tsf_availability_command, 
+            open_ms_settings_regionlanguage_jpnime, 
+            load_dictionary, 
+            save_dictionary,
+            check_update
+        ])
         .setup(|app| {
+            APP_HANDLE.set(app.app_handle().to_owned()).unwrap();
+
             let _span = tracing::span!(tracing::Level::INFO, "main");
             app.manage(STATE.lock().unwrap().clone());
             app.manage(DICTIONARY.lock().unwrap().clone());
@@ -127,6 +162,15 @@ fn main() {
                 app_handle: app_handle.clone(),
             });
             registry.init();
+
+            let update_handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = update_handle.updater()
+                    .unwrap()
+                    .check()
+                    .await
+                    .map_err(|e| tracing::error!("Failed to check for updates: {}", e));
+            });
 
             std::thread::spawn(move || {
                 let _com = Com::new().unwrap();

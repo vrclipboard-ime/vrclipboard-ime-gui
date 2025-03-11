@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { List, Settings, Terminal, Bug, Info, Check } from 'lucide-react';
+import { List, Settings, Terminal, Bug, Info, Check, Download, X } from 'lucide-react';
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import "./App.css";
 import TitleBar from "./TitleBar";
 import SettingsComponent from "./SettingsComponent";
@@ -26,6 +28,13 @@ const AppContent = () => {
   const [currentSettings, setCurrentSettings] = useState<Config | null>(null);
   const [_isTsfAvailable, setIsTsfAvailable] = useState<boolean | null>(null);
   const [showTsfSuccessMessage, setShowTsfSuccessMessage] = useState(false);
+  
+  // 更新関連のstate
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateDownloading, setUpdateDownloading] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [contentLength, setContentLength] = useState<number>(0);
+  const [updateInfo, setUpdateInfo] = useState<{version: string, date: string | undefined, body: string | undefined} | null>(null);
 
   useEffect(() => {
     const unlisten = listen<Log>('addLog', (event) => {
@@ -60,6 +69,33 @@ const AppContent = () => {
     
     checkTsfSettings();
   }, []);
+  
+  // アプリ起動時に更新を自動チェック
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const update = await check();
+        if (update) {
+          console.log(`更新が見つかりました: ${update.version} (${update.date}) - ${update.body}`);
+          setUpdateAvailable(true);
+          setUpdateInfo({
+            version: update.version,
+            date: update.date,
+            body: update.body
+          });
+        }
+      } catch (error) {
+        console.error('更新チェックエラー:', error);
+      }
+    };
+    
+    // アプリ起動から少し遅らせて更新チェック
+    const timer = setTimeout(() => {
+      checkForUpdates();
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // 設定保存関数
   const saveSettings = async (config: Config) => {
@@ -69,6 +105,51 @@ const AppContent = () => {
     } catch (error) {
       console.error('設定保存エラー:', error);
     }
+  };
+  
+  // 更新処理
+  const handleInstallUpdate = async () => {
+    try {
+      setUpdateDownloading(true);
+      setUpdateAvailable(false);
+      
+      const update = await check();
+      if (!update) {
+        setUpdateDownloading(false);
+        return;
+      }
+      
+      let downloaded = 0;
+      
+      await update.downloadAndInstall((event: any) => {
+        switch (event.event) {
+          case 'Started':
+            setContentLength(event.data.contentLength);
+            console.log(`ダウンロード開始: ${event.data.contentLength} bytes`);
+            break;
+          case 'Progress':
+            downloaded += event.data.chunkLength;
+            const progress = contentLength > 0 ? (downloaded / contentLength) * 100 : 0;
+            setUpdateProgress(progress);
+            console.log(`ダウンロード中: ${downloaded} / ${contentLength} (${progress.toFixed(1)}%)`);
+            break;
+          case 'Finished':
+            console.log('ダウンロード完了');
+            break;
+        }
+      });
+      
+      console.log('更新がインストールされました');
+      // アプリを再起動
+      await relaunch();
+    } catch (error) {
+      console.error('更新インストールエラー:', error);
+      setUpdateDownloading(false);
+    }
+  };
+
+  const dismissUpdate = () => {
+    setUpdateAvailable(false);
   };
 
   const renderLogEntry = (log: { time: string; original: string; converted: string }, index: number) => (
@@ -185,6 +266,63 @@ const AppContent = () => {
             <p className="font-medium text-sm">TSF再変換が有効化されました</p>
             <p className="text-xs text-green-700 dark:text-green-300">文字変換機能が拡張されました</p>
           </div>
+        </div>
+      )}
+      
+      {/* 更新通知 */}
+      {updateAvailable && !updateDownloading && updateInfo && (
+        <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded shadow-lg flex flex-col max-w-xs z-50">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">アップデートが利用可能です</h3>
+            <button onClick={dismissUpdate} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+            <div className="mb-1">
+              <span className="font-medium">バージョン: </span>
+              {updateInfo.version}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">リリース日: </span>
+              {updateInfo.date}
+            </div>
+            <div>
+              <span className="font-medium">変更内容: </span>
+              <p className="mt-1 bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-600">
+                {updateInfo.body}
+              </p>
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={dismissUpdate}
+              className="flex-1 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1.5 rounded text-sm"
+            >
+              後で
+            </button>
+            <button
+              onClick={handleInstallUpdate}
+              className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-1.5 rounded text-sm flex items-center justify-center"
+            >
+              <Download size={14} className="mr-1.5" />
+              更新する
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* ダウンロード中ダイアログ */}
+      {updateDownloading && (
+        <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded shadow-lg flex flex-col max-w-xs z-50">
+          <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">ダウンロード中...</h3>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2 overflow-hidden">
+            <div 
+              className="bg-indigo-500 h-full rounded transition-all duration-300" 
+              style={{ width: `${updateProgress}%` }} 
+            />
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">{Math.round(updateProgress)}%</p>
         </div>
       )}
     </div>
