@@ -1,35 +1,43 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod azookey;
 mod com;
 mod config;
 mod conversion;
 mod converter;
+mod dictionary;
 mod felanguage;
 mod handler;
+mod tauri_emit_subscriber;
 mod transform_rule;
 mod tsf;
-mod tsf_conversion;
-mod tauri_emit_subscriber;
 mod tsf_availability;
-mod dictionary;
+mod tsf_conversion;
 
-use std::sync::{Mutex, OnceLock};
+use std::{
+    io::{BufRead, BufReader},
+    path::PathBuf,
+    process::Stdio,
+    sync::{Mutex, OnceLock, RwLock},
+};
 
+use azookey::server::AzookeyConversionServer;
 use once_cell::sync::Lazy;
+use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
 use clipboard_master::Master;
 use com::Com;
 use config::Config;
+use dictionary::Dictionary;
 use handler::ConversionHandler;
 use tauri_emit_subscriber::TauriEmitSubscriber;
 use tauri_plugin_updater::UpdaterExt;
+use tracing::{debug, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use tsf_availability::check_tsf_availability;
-use tracing::{debug, error};
-use dictionary::Dictionary;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Log {
@@ -72,7 +80,7 @@ fn check_tsf_availability_command() -> Result<bool, String> {
         Ok(result) => {
             debug!("TSF availability check result: {}", result);
             Ok(result)
-        },
+        }
         Err(e) => Err(format!("Failed to check TSF availability: {}", e)),
     }
 }
@@ -114,7 +122,7 @@ async fn check_update() -> Result<bool, String> {
                 Err(e) => {
                     error!("Failed to check for updates: {}", e);
                     Err(format!("Failed to check for updates: {}", e))
-                },
+                }
             },
             Err(e) => {
                 error!("Updater not available: {}", e);
@@ -127,7 +135,73 @@ async fn check_update() -> Result<bool, String> {
     }
 }
 
-fn main() {
+fn start_server_process() -> String {
+    let exe_path = std::env::current_exe().unwrap();
+    let server_path = exe_path.to_str().unwrap();
+
+    let mut command = std::process::Command::new(server_path);
+
+    command.arg("server");
+    let mut child = command
+        .arg("server")
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let stdout = child.stdout.take().unwrap();
+    let reader = BufReader::new(stdout);
+
+    let mut server_name = String::new();
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if line.starts_with("$") {
+            server_name = line[1..line.len() - 1].to_string();
+            break;
+        }
+    }
+
+    server_name
+}
+
+static SERVER_NAME: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
+
+fn extract_dictionary() {
+    let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
+    let zip_path = self_exe_path
+        .parent()
+        .unwrap()
+        .join("AzooKeyDictionary.zip");
+    let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false).unwrap();
+    let extract_path = app_dirs.config_dir.join("AzooKeyDictionary");
+    if !extract_path.exists() {
+        std::fs::create_dir_all(&extract_path).unwrap();
+        let mut zip = zip::ZipArchive::new(std::fs::File::open(zip_path).unwrap()).unwrap();
+        zip.extract(&extract_path).unwrap();
+    }
+}
+
+pub static SELF_EXE_PATH: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new(String::default()));
+
+#[tokio::main]
+async fn main() {
+    let args = std::env::args().collect::<Vec<_>>();
+
+    if args.contains(&"server".to_string()) {
+        let server = AzookeyConversionServer::new();
+        let server_name = &server.server_name;
+        println!("${}$", server_name);
+        server.server_loop();
+        return;
+    } else {
+        println!("Args: {:?}", args);
+        SELF_EXE_PATH.write().unwrap().push_str(&args[0]);
+    }
+
+    let server_name = start_server_process();
+    SERVER_NAME.lock().unwrap().replace(server_name);
+
+    extract_dictionary();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -137,16 +211,17 @@ fn main() {
                 Config::load().expect("Failed to load default config")
             })),
             dictionary: Mutex::new(Dictionary::load().unwrap_or_else(|_| {
-                Dictionary::generate_default_dictionary().expect("Failed to generate default dictionary");
+                Dictionary::generate_default_dictionary()
+                    .expect("Failed to generate default dictionary");
                 Dictionary::load().expect("Failed to load default dictionary")
             })),
         })
         .invoke_handler(tauri::generate_handler![
-            load_settings, 
-            save_settings, 
-            check_tsf_availability_command, 
-            open_ms_settings_regionlanguage_jpnime, 
-            load_dictionary, 
+            load_settings,
+            save_settings,
+            check_tsf_availability_command,
+            open_ms_settings_regionlanguage_jpnime,
+            load_dictionary,
             save_dictionary,
             check_update
         ])
@@ -165,7 +240,8 @@ fn main() {
 
             let update_handle = app_handle.clone();
             tauri::async_runtime::spawn(async move {
-                let _ = update_handle.updater()
+                let _ = update_handle
+                    .updater()
                     .unwrap()
                     .check()
                     .await

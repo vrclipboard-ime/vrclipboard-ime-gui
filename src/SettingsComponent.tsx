@@ -8,8 +8,9 @@ export interface Config {
   command: string;
   ignore_prefix: boolean;
   on_copy_mode: OnCopyMode;
-  skip_url: boolean; 
+  skip_url: boolean;
   use_tsf_reconvert: boolean;
+  use_azookey_conversion: boolean; // 新しい設定を追加
   skip_on_out_of_vrc: boolean;
   tsf_announce?: boolean;
 }
@@ -39,11 +40,10 @@ const InputField: React.FC<InputFieldProps> = ({ name, label, value, onChange, d
       name={name}
       value={value}
       onChange={onChange}
-      className={`w-full p-1.5 text-sm border rounded focus:border-indigo-400 outline-none transition-colors ${
-        disabled 
-          ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-          : 'bg-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600'
-      }`}
+      className={`w-full p-1.5 text-sm border rounded focus:border-indigo-400 outline-none transition-colors ${disabled
+        ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+        : 'bg-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600'
+        }`}
       disabled={disabled}
     />
     {description && (
@@ -72,15 +72,13 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({ id, name, label, checked,
           checked={checked}
           onChange={onChange}
           disabled={disabled}
-          className={`h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 transition-colors ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
         />
       </div>
       <div className="ml-2 text-xs">
-        <label htmlFor={id} className={`text-gray-700 dark:text-gray-300 transition-colors ${
-          disabled ? 'opacity-50 cursor-not-allowed' : ''
-        }`}>
+        <label htmlFor={id} className={`text-gray-700 dark:text-gray-300 transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''
+          }`}>
           {label}
         </label>
       </div>
@@ -94,7 +92,7 @@ interface SettingsComponentProps {
   onSaveSettings: (config: Config) => Promise<void>;
 }
 
-const SettingsComponent: React.FC<SettingsComponentProps> = ({ 
+const SettingsComponent: React.FC<SettingsComponentProps> = ({
   setShowTsfModal,
   currentSettings,
   onSaveSettings
@@ -107,6 +105,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     on_copy_mode: OnCopyMode.ReturnToChatbox,
     skip_url: true,
     use_tsf_reconvert: false,
+    use_azookey_conversion: false, // 初期値を追加
     skip_on_out_of_vrc: true,
   });
   const [isOpen, setIsOpen] = useState(false);
@@ -165,10 +164,12 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     saveSettings(newSettings);
   };
 
-  const handleTsfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = e.target.checked;
-    
-    if (isChecked) {
+  // 変換方式の変更を処理する関数（TSFとAzooKeyの排他制御）
+  const handleConversionChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+
+    // TSF再変換が選択された場合
+    if (name === "use_tsf_reconvert" && checked) {
       try {
         const available: boolean = await invoke('check_tsf_availability_command');
         if (!available && setShowTsfModal) {
@@ -176,17 +177,39 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
           return;
         }
       } catch (error) {
+        console.error('TSF availability check failed:', error);
         return;
       }
-    }
 
-    const { name, value, type } = e.target;
-    const newSettings = {
-      ...settings,
-      [name]: type === 'checkbox' ? isChecked : value
-    };
-    setSettings(newSettings);
-    saveSettings(newSettings);
+      // TSFがオンになったらAzooKeyをオフにする
+      const newSettings = {
+        ...settings,
+        use_tsf_reconvert: true,
+        use_azookey_conversion: false
+      };
+      setSettings(newSettings);
+      saveSettings(newSettings);
+    }
+    // AzooKey変換が選択された場合
+    else if (name === "use_azookey_conversion" && checked) {
+      // AzooKeyがオンになったらTSFをオフにする
+      const newSettings = {
+        ...settings,
+        use_azookey_conversion: true,
+        use_tsf_reconvert: false
+      };
+      setSettings(newSettings);
+      saveSettings(newSettings);
+    }
+    // どちらかがオフになった場合はそのまま状態を更新
+    else {
+      const newSettings = {
+        ...settings,
+        [name]: checked
+      };
+      setSettings(newSettings);
+      saveSettings(newSettings);
+    }
   };
 
   const handleSelectChange = (value: OnCopyMode) => {
@@ -226,6 +249,11 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     }
   };
 
+  // 入力フィールドが無効化されるべきかを判定する関数
+  const isInputDisabled = () => {
+    return settings.use_tsf_reconvert || settings.use_azookey_conversion;
+  };
+
   return (
     <div className="h-full">
       <div className="flex items-center justify-between mb-2">
@@ -240,43 +268,43 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1 transition-colors">基本設定</h3>
-            
+
             <InputField
               name="split"
               label="区切り文字"
               value={settings.split}
               onChange={handleChange}
-              disabled={settings.use_tsf_reconvert}
+              disabled={isInputDisabled()}
               description="複数の変換モードを使いたい場合の区切り文字"
             />
-            
+
             <InputField
               name="command"
               label="モード変更文字"
               value={settings.command}
               onChange={handleChange}
-              disabled={settings.use_tsf_reconvert}
+              disabled={isInputDisabled()}
               description="変換モードを変更するための文字"
             />
-            
+
             <CheckboxField
               id="ignore_prefix"
               name="ignore_prefix"
               label="無条件で変換"
               checked={settings.ignore_prefix}
               onChange={handleChange}
-              disabled={settings.use_tsf_reconvert}
+              disabled={isInputDisabled()}
             />
-            
+
             <InputField
               name="prefix"
               label="開始文字"
               value={settings.prefix}
               onChange={handleChange}
-              disabled={settings.ignore_prefix || settings.use_tsf_reconvert}
+              disabled={settings.ignore_prefix || isInputDisabled()}
               description="変換を開始する文字（無条件で変換がオンの場合は無効）"
             />
-            
+
             <div className="relative mb-3" ref={dropdownRef}>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
                 コピー時の動作
@@ -308,10 +336,10 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
               )}
             </div>
           </div>
-          
+
           <div>
             <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 pb-1 transition-colors">詳細設定</h3>
-            
+
             <CheckboxField
               id="skip_url"
               name="skip_url"
@@ -319,7 +347,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
               checked={settings.skip_url}
               onChange={handleChange}
             />
-            
+
             <CheckboxField
               id="skip_on_out_of_vrc"
               name="skip_on_out_of_vrc"
@@ -327,22 +355,45 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
               checked={settings.skip_on_out_of_vrc}
               onChange={handleChange}
             />
-            
+
             <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-xs transition-colors">
-              <CheckboxField
-                id="use_tsf_reconvert"
-                name="use_tsf_reconvert"
-                label={
-                  <span>
-                    <span className="text-indigo-600 dark:text-indigo-400 font-medium transition-colors">TSF再変換を使用</span>
-                  </span>
-                }
-                checked={settings.use_tsf_reconvert}
-                onChange={handleTsfChange}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
-                Windows10/11では「以前のバージョンの Microsoft IME を使う」を有効化する必要があります。有効にすると区切り、モード変更、開始文字が無効化されます。
-              </p>
+              <h4 className="text-xs font-medium mb-2 text-gray-700 dark:text-gray-300 pb-1 transition-colors">高度な変換方式</h4>
+
+              <div className="mt-2">
+                <CheckboxField
+                  id="use_azookey_conversion"
+                  name="use_azookey_conversion"
+                  label={
+                    <span>
+                      <span className="text-indigo-600 dark:text-indigo-400 font-medium transition-colors">AzooKey変換</span>
+                    </span>
+                  }
+                  checked={settings.use_azookey_conversion}
+                  onChange={handleConversionChange}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
+                  azooKey変換機能を使用します。有効にすると区切り、モード変更、開始文字が無効化されます。<br />
+                  CPU負荷は高くなりますが、変換精度が向上します。
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <CheckboxField
+                  id="use_tsf_reconvert"
+                  name="use_tsf_reconvert"
+                  label={
+                    <span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium transition-colors">TSF再変換</span>
+                    </span>
+                  }
+                  checked={settings.use_tsf_reconvert}
+                  onChange={handleConversionChange}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
+                  非推奨です。<br />
+                  Windows10/11では「以前のバージョンの Microsoft IME を使う」を有効化する必要があります。有効にすると区切り、モード変更、開始文字が無効化されます。
+                </p>
+              </div>
             </div>
           </div>
         </div>

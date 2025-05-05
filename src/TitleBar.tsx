@@ -32,7 +32,7 @@ const TitleBar = () => {
         unlistenMaximize = await listen('tauri://resize', () => {
           checkMaximized();
         });
-        
+
         // ウィンドウ復元イベントもリッスン
         unlistenRestore = await listen('tauri://move', () => {
           checkMaximized();
@@ -55,17 +55,17 @@ const TitleBar = () => {
   const handleMinimize = () => appWindow.minimize();
   const handleToggleMaximize = () => appWindow.toggleMaximize();
 
-  const TitleButton = ({ 
-    onClick, 
-    icon, 
+  const TitleButton = ({
+    onClick,
+    icon,
     hoverClass = "hover:bg-gray-700"
-  }: { 
-    onClick: () => void, 
+  }: {
+    onClick: () => void,
     icon: React.ReactNode,
-    hoverClass?: string 
+    hoverClass?: string
   }) => (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       className={`p-1 rounded focus:outline-none transition-colors ${hoverClass}`}
     >
       {icon}
@@ -79,31 +79,31 @@ const TitleBar = () => {
     >
       <div className="flex items-center" data-tauri-drag-region>
         <span className="text-xs font-medium" data-tauri-drag-region>VRClipboard-IME</span>
-        <span className="text-xs opacity-80 ml-1" data-tauri-drag-region>v1.11.0</span>
+        <span className="text-xs opacity-80 ml-1" data-tauri-drag-region>v1.12.0</span>
       </div>
       <div className="flex">
-        <TitleButton 
-          onClick={toggleTheme} 
-          icon={theme === 'dark' ? 
-            <Sun size={12} className="text-white/90" /> : 
+        <TitleButton
+          onClick={toggleTheme}
+          icon={theme === 'dark' ?
+            <Sun size={12} className="text-white/90" /> :
             <Moon size={12} className="text-white/90" />
-          } 
+          }
         />
-        <TitleButton 
-          onClick={handleMinimize} 
-          icon={<Minus size={12} className="text-white/90" />} 
+        <TitleButton
+          onClick={handleMinimize}
+          icon={<Minus size={12} className="text-white/90" />}
         />
-        <TitleButton 
-          onClick={handleToggleMaximize} 
-          icon={isMaximized ? 
-            <Square size={12} className="text-white/90" /> : 
+        <TitleButton
+          onClick={handleToggleMaximize}
+          icon={isMaximized ?
+            <Square size={12} className="text-white/90" /> :
             <Maximize2 size={12} className="text-white/90" />
-          } 
+          }
         />
-        <TitleButton 
-          onClick={handleClose} 
-          icon={<X size={14} className="text-white/90" />} 
-          hoverClass="hover:bg-red-600" 
+        <TitleButton
+          onClick={handleClose}
+          icon={<X size={14} className="text-white/90" />}
+          hoverClass="hover:bg-red-600"
         />
       </div>
     </div>

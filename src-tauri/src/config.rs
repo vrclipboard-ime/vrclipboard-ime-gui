@@ -32,7 +32,11 @@ pub struct Config {
     #[serde(default = "bool_true")]
     pub skip_on_out_of_vrc: bool,
     #[serde(default = "bool_false")]
-    pub tsf_announce: bool
+    pub tsf_announce: bool,
+    #[serde(default = "bool_false")]
+    pub use_azookey_conversion: bool,
+    #[serde(default = "bool_false")]
+    pub azookey_announce: bool,
 }
 
 impl Default for Config {
@@ -46,7 +50,9 @@ impl Default for Config {
             skip_url: true,
             use_tsf_reconvert: true,
             skip_on_out_of_vrc: true,
-            tsf_announce: false
+            tsf_announce: false,
+            use_azookey_conversion: false,
+            azookey_announce: false,
         }
     }
 }
@@ -99,6 +105,11 @@ impl Config {
         if !config.tsf_announce {
             config.use_tsf_reconvert = true;
             config.tsf_announce = true;
+        }
+        if !config.azookey_announce {
+            config.use_tsf_reconvert = false;
+            config.use_azookey_conversion = true;
+            config.azookey_announce = true;
         }
         debug!("Config loaded successfully");
         Ok(config)

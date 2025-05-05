@@ -30,6 +30,11 @@ windows-core = "0.56.0"
 tracing = "0.1"
 tracing-appender = "0.2"
 tauri-plugin-shell = "2.0.0-rc"
+azookey-binding = { path = "../../rs-azookey-binding" }
+tokio = { version = "1.44.2", features = ["full"] }
+ipc-channel = "0.19.0"
+zip = "2.6.1"
+wana_kana = "4.0.0"
 
 [dependencies.tracing-subscriber]
 version = "0.3.16"
@@ -67,7 +72,7 @@ features = [
     "Win32_System_Variant",
     "Win32_System_WindowsProgramming",
     "Win32_UI_Controls",
-    "Win32_UI_HiDpi"
+    "Win32_UI_HiDpi",
 ]
 
 

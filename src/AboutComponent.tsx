@@ -7,7 +7,7 @@ const AboutComponent: React.FC = () => {
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'notAvailable' | 'error'>('idle');
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [contentLength, setContentLength] = useState<number>(0);
-  const [updateInfo, setUpdateInfo] = useState<{version: string, date: string | undefined, body: string | undefined} | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{ version: string, date: string | undefined, body: string | undefined } | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   const openLink = (url: string) => {
@@ -18,7 +18,7 @@ const AboutComponent: React.FC = () => {
     try {
       setUpdateStatus('checking');
       const update = await check();
-      
+
       if (update) {
         console.log(`更新が見つかりました: ${update.version} (${update.date}) - ${update.body}`);
         setUpdateStatus('available');
@@ -48,9 +48,9 @@ const AboutComponent: React.FC = () => {
         setTimeout(() => setUpdateStatus('idle'), 3000);
         return;
       }
-      
+
       let downloaded = 0;
-      
+
       // 更新をダウンロードしてインストール
       await update.downloadAndInstall((event: any) => {
         switch (event.event) {
@@ -69,7 +69,7 @@ const AboutComponent: React.FC = () => {
             break;
         }
       });
-      
+
       console.log('更新がインストールされました');
       // アプリを再起動
       await relaunch();
@@ -138,14 +138,14 @@ const AboutComponent: React.FC = () => {
             <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">
               アップデートが利用可能です
             </h3>
-            <button 
-              onClick={() => setShowUpdateDialog(false)} 
+            <button
+              onClick={() => setShowUpdateDialog(false)}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <X size={18} />
             </button>
           </div>
-          
+
           <div className="mb-4">
             <div className="flex items-center mb-2">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20">バージョン:</span>
@@ -162,7 +162,7 @@ const AboutComponent: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               onClick={() => setShowUpdateDialog(false)}
@@ -197,7 +197,7 @@ const AboutComponent: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4">
           <div className="font-semibold text-lg text-indigo-600 dark:text-indigo-400 mr-3">VRClipboard-IME</div>
           <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs py-1 px-2 rounded">
-            v1.11.0
+            v1.12.0
           </div>
         </div>
 
@@ -209,7 +209,7 @@ const AboutComponent: React.FC = () => {
             <div className="text-sm">
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">バージョン:</span>
-                <span className="text-gray-600 dark:text-gray-400">1.11.1</span>
+                <span className="text-gray-600 dark:text-gray-400">1.12.0</span>
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">ライセンス:</span>
@@ -217,7 +217,7 @@ const AboutComponent: React.FC = () => {
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">最終更新:</span>
-                <span className="text-gray-600 dark:text-gray-400">2025年3月11日</span>
+                <span className="text-gray-600 dark:text-gray-400">2025年5月5日</span>
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">技術:</span>
@@ -241,7 +241,7 @@ const AboutComponent: React.FC = () => {
               </div>
               <div className="flex items-center mb-1">
                 <span className="text-gray-700 dark:text-gray-300 w-20">GitHub:</span>
-                <button 
+                <button
                   onClick={() => openLink('https://github.com/mii443')}
                   className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center"
                 >
@@ -274,20 +274,19 @@ const AboutComponent: React.FC = () => {
               <button
                 onClick={checkForUpdates}
                 disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-                className={`flex items-center text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1.5 rounded text-sm ${
-                  (updateStatus === 'checking' || updateStatus === 'downloading') ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
+                className={`flex items-center text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1.5 rounded text-sm ${(updateStatus === 'checking' || updateStatus === 'downloading') ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
               >
                 {getUpdateButtonContent()}
               </button>
             </div>
           </div>
-          
+
           {updateStatus === 'downloading' && (
             <div className="mt-2">
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2 overflow-hidden">
-                <div 
-                  className="bg-indigo-500 h-full rounded transition-all duration-300" 
+                <div
+                  className="bg-indigo-500 h-full rounded transition-all duration-300"
                   style={{ width: `${downloadProgress}%` }}
                 />
               </div>
@@ -295,7 +294,7 @@ const AboutComponent: React.FC = () => {
           )}
         </div>
       </div>
-      
+
       {/* 更新ダイアログ */}
       <UpdateDialog />
     </div>

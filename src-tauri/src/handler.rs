@@ -1,10 +1,11 @@
 use std::net::UdpSocket;
 
 use crate::{
+    azookey::{azookey_conversion::AzookeyConversion, client::AzookeyConversionClient},
     config::{Config, OnCopyMode},
     conversion::Conversion,
     tsf_conversion::TsfConversion,
-    Log, STATE,
+    Log, SERVER_NAME, STATE,
 };
 use anyhow::Result;
 use chrono::Local;
@@ -20,6 +21,7 @@ pub struct ConversionHandler {
     app_handle: AppHandle,
     conversion: Conversion,
     tsf_conversion: Option<TsfConversion>,
+    azookey_conversion: Option<AzookeyConversion>,
     clipboard_ctx: ClipboardContext,
     last_text: String,
 }
@@ -28,6 +30,7 @@ impl ConversionHandler {
     pub fn new(app_handle: AppHandle) -> Result<Self> {
         let conversion = Conversion::new();
         let tsf_conversion = None;
+        let azookey_conversion = None;
         let clipboard_ctx = ClipboardProvider::new().unwrap();
 
         info!("ConversionHandler created");
@@ -35,6 +38,7 @@ impl ConversionHandler {
             app_handle,
             conversion,
             tsf_conversion,
+            azookey_conversion,
             clipboard_ctx,
             last_text: String::new(),
         })
@@ -48,6 +52,45 @@ impl ConversionHandler {
 impl ConversionHandler {
     fn clipboard_has_owner(&mut self) -> bool {
         unsafe { GetClipboardOwner() }.0 != 0
+    }
+
+    fn azookey_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {
+        if contents.chars().count() > 140 {
+            info!("Content exceeds 140 characters, skipping Azookey conversion");
+            return Ok(());
+        }
+        if contents.is_empty() {
+            info!("Empty content, skipping Azookey conversion");
+            return Ok(());
+        }
+        if config.skip_url
+            && Regex::new(r"(http://|https://){1}[\w\.\-/:\#\?=\&;%\~\+]+")
+                .unwrap()
+                .is_match(&contents)
+        {
+            info!("URL detected, skipping Azookey conversion");
+            return Ok(());
+        }
+
+        if self.azookey_conversion.is_none() {
+            let server_name = SERVER_NAME.lock().unwrap().clone().unwrap();
+            let client = AzookeyConversionClient::new(server_name.clone());
+            let conversion = AzookeyConversion::new(client);
+            self.azookey_conversion = Some(conversion);
+            info!("Azookey conversion created");
+        }
+
+        let azookey_conversion = self.azookey_conversion.as_mut().unwrap();
+
+        let converted = azookey_conversion.convert(contents)?;
+
+        info!("Azookey conversion: {} -> {}", contents, converted);
+
+        self.last_text = contents.to_string().clone();
+
+        self.return_conversion(contents.to_string(), converted, config);
+
+        Ok(())
     }
 
     fn tsf_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {
@@ -160,6 +203,13 @@ impl ClipboardHandler for ConversionHandler {
         }
 
         if let Ok(mut contents) = self.clipboard_ctx.get_contents() {
+            if config.use_azookey_conversion {
+                if let Err(e) = self.azookey_conversion(&contents, &config) {
+                    error!("Azookey conversion failed: {}", e);
+                }
+                return CallbackResult::Next;
+            }
+
             if config.use_tsf_reconvert {
                 if let Err(e) = self.tsf_conversion(&contents, &config) {
                     error!("TSF conversion failed: {}", e);
