@@ -186,15 +186,14 @@ pub static SELF_EXE_PATH: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new(String
 async fn main() {
     let args = std::env::args().collect::<Vec<_>>();
 
+    SELF_EXE_PATH.write().unwrap().push_str(&args[0]);
+
     if args.contains(&"server".to_string()) {
         let server = AzookeyConversionServer::new();
         let server_name = &server.server_name;
         println!("${}$", server_name);
         server.server_loop();
         return;
-    } else {
-        println!("Args: {:?}", args);
-        SELF_EXE_PATH.write().unwrap().push_str(&args[0]);
     }
 
     let server_name = start_server_process();

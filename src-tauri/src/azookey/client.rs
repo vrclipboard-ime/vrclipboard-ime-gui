@@ -1,11 +1,7 @@
-use std::path::PathBuf;
-
 use azookey_binding::Candidate;
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
 
 use tracing::info;
-
-use crate::SELF_EXE_PATH;
 
 use super::IpcMessage;
 
@@ -41,16 +37,8 @@ impl AzookeyConversionClient {
 
     pub fn request_candidates(&mut self, context: &str) -> Vec<Candidate> {
         info!("Requesting candidates for context: {}", context);
-        let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
-        let weight_path = self_exe_path
-            .parent()
-            .unwrap()
-            .join("ggml-model-Q5_K_M.gguf");
         self.sender
-            .send(IpcMessage::RequestCandidates(
-                context.to_string(),
-                weight_path.to_string_lossy().to_string(),
-            ))
+            .send(IpcMessage::RequestCandidates(context.to_string()))
             .unwrap();
         loop {
             match self.receiver.recv() {

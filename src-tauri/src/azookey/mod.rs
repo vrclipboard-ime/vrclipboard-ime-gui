@@ -12,7 +12,7 @@ pub enum IpcMessage {
     Sender(IpcSender<IpcMessage>),
     ResetComposingText,
     InsertAtCursorPosition(String),
-    RequestCandidates(String, String),
+    RequestCandidates(String),
     Candidates(Vec<Candidate>),
     End,
 }
