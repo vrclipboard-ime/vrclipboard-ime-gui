@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use azookey_binding::{Candidate, ComposingText, KanaKanjiConverter};
 use ipc_channel::ipc::IpcOneShotServer;
+use itertools::Itertools;
 use platform_dirs::AppDirs;
 
 use super::IpcMessage;
@@ -61,6 +62,56 @@ impl AzookeyConversionServer {
         instance
     }
 
+    fn pre_process_text(text: &str) -> String {
+        let mut result = String::new();
+
+        // replace all characters in the text with their corresponding replacements
+        for c in text.chars() {
+            if let Some(&replacement) = SIGNMAP.get(c.to_string().as_str()) {
+                result.push_str(replacement);
+            } else {
+                result.push(c);
+            }
+        }
+
+        // push 'n' if the last and second last characters are 'n'
+        if result.ends_with('n') {
+            let mut chars = result.chars().collect::<Vec<_>>();
+            if chars.len() > 1 && chars[chars.len() - 2] != 'n' {
+                chars.push('n');
+            }
+            result = chars.into_iter().collect::<String>();
+        }
+
+        // push '§' at the end of the string to avoid unnecessary prediction
+        result.push_str("§");
+
+        result
+    }
+
+    fn post_process_text(text: &str) -> String {
+        let mut result = text.to_string();
+
+        if result.ends_with('§') {
+            result.pop();
+        }
+
+        result
+    }
+
+    fn post_process_candidates(candidates: Vec<Candidate>) -> Vec<Candidate> {
+        candidates
+            .iter()
+            .take(8)
+            .map(|c| {
+                let mut candidate = c.clone();
+                candidate.text = Self::post_process_text(&candidate.text);
+                candidate
+            })
+            .unique_by(|c| c.text.clone())
+            .collect()
+    }
+
     pub fn server_loop(mut self) {
         let (a, _) = self.server.accept().unwrap();
         let mut sender = None;
@@ -74,16 +125,7 @@ impl AzookeyConversionServer {
                     self.composing_text = ComposingText::new();
                 }
                 Ok(IpcMessage::InsertAtCursorPosition(text)) => {
-                    let text: String = text
-                        .chars()
-                        .map(|c| {
-                            if let Some(&replacement) = SIGNMAP.get(c.to_string().as_str()) {
-                                return replacement.to_string();
-                            } else {
-                                c.to_string()
-                            }
-                        })
-                        .collect();
+                    let text = Self::pre_process_text(&text);
                     self.composing_text.insert_at_cursor_position(&text);
                 }
                 Ok(IpcMessage::RequestCandidates(context, weight_path)) => {
@@ -99,11 +141,7 @@ impl AzookeyConversionServer {
                         &weight_path,
                     );
                     if let Some(s) = sender.as_ref() {
-                        let candidates = candidates
-                            .iter()
-                            .take(8)
-                            .map(|c| c.clone())
-                            .collect::<Vec<Candidate>>();
+                        let candidates = Self::post_process_candidates(candidates);
                         s.send(IpcMessage::Candidates(candidates)).unwrap();
                     }
                 }
