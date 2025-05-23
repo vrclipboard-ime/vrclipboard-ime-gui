@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ChevronDown, Settings, Save, AlertCircle, Check } from 'lucide-react';
+import { ChevronDown, Settings, Save, AlertCircle, Check, Download } from 'lucide-react';
 
 export interface Config {
   prefix: string;
@@ -110,6 +110,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   });
   const [isOpen, setIsOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [manifestStatus, setManifestStatus] = useState<'idle' | 'registering' | 'success' | 'error'>('idle');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -249,9 +250,34 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     }
   };
 
-  // 入力フィールドが無効化されるべきかを判定する関数
   const isInputDisabled = () => {
     return settings.use_tsf_reconvert || settings.use_azookey_conversion;
+  };
+
+  const handleRegisterManifest = async () => {
+    setManifestStatus('registering');
+    try {
+      await invoke('register_manifest');
+      setManifestStatus('success');
+      setTimeout(() => setManifestStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Failed to register manifest:', error);
+      setManifestStatus('error');
+      setTimeout(() => setManifestStatus('idle'), 3000);
+    }
+  };
+
+  const ManifestStatusIndicator = () => {
+    switch (manifestStatus) {
+      case 'registering':
+        return <span className="flex items-center text-indigo-500 text-xs animate-pulse"><Download size={10} className="mr-0.5" /> 登録中</span>;
+      case 'success':
+        return <span className="flex items-center text-green-500 text-xs"><Check size={10} className="mr-0.5" /> 登録完了</span>;
+      case 'error':
+        return <span className="flex items-center text-red-500 text-xs"><AlertCircle size={10} className="mr-0.5" /> 登録失敗</span>;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -393,6 +419,32 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                   非推奨です。<br />
                   Windows10/11では「以前のバージョンの Microsoft IME を使う」を有効化する必要があります。有効にすると区切り、モード変更、開始文字が無効化されます。
                 </p>
+              </div>
+            </div>
+
+            <div className="mt-4 p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+              <h4 className="text-xs font-medium mb-2 text-gray-700 dark:text-gray-300">SteamVR連携</h4>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    オーバーレイアプリケーションとして登録します
+                  </p>
+                </div>
+                <div className="flex flex-col items-end">
+                  <button
+                    onClick={handleRegisterManifest}
+                    disabled={manifestStatus === 'registering'}
+                    className={`px-3 py-1.5 text-xs rounded transition-colors ${manifestStatus === 'registering'
+                      ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
+                      : 'bg-indigo-500 hover:bg-indigo-600 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700'
+                      }`}
+                  >
+                    {manifestStatus === 'registering' ? '登録中...' : '登録'}
+                  </button>
+                  <div className="mt-1">
+                    <ManifestStatusIndicator />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

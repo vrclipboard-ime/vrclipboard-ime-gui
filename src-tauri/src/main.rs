@@ -14,6 +14,7 @@ mod transform_rule;
 mod tsf;
 mod tsf_availability;
 mod tsf_conversion;
+mod vr;
 
 use std::{
     io::{BufRead, BufReader},
@@ -54,6 +55,7 @@ struct AppState {
 static STATE: Lazy<Mutex<Config>> = Lazy::new(|| Mutex::new(Config::load().unwrap()));
 static DICTIONARY: Lazy<Mutex<Dictionary>> = Lazy::new(|| Mutex::new(Dictionary::load().unwrap()));
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static SERVER_PROCESS: Lazy<Mutex<Option<std::process::Child>>> = Lazy::new(|| Mutex::new(None));
 
 #[tauri::command]
 fn load_settings(state: State<AppState>) -> Result<Config, String> {
@@ -135,18 +137,21 @@ async fn check_update() -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+async fn register_manifest() -> Result<(), String> {
+    vr::create_vrmanifest().unwrap();
+    vr::register_manifest_with_openvr().unwrap();
+    Ok(())
+}
+
 fn start_server_process() -> String {
     let exe_path = std::env::current_exe().unwrap();
     let server_path = exe_path.to_str().unwrap();
 
     let mut command = std::process::Command::new(server_path);
-
     command.arg("server");
-    let mut child = command
-        .arg("server")
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+
+    let mut child = command.stdout(Stdio::piped()).spawn().unwrap();
 
     let stdout = child.stdout.take().unwrap();
     let reader = BufReader::new(stdout);
@@ -160,10 +165,30 @@ fn start_server_process() -> String {
         }
     }
 
+    *SERVER_PROCESS.lock().unwrap() = Some(child);
+
     server_name
 }
 
+fn cleanup_server_process() {
+    if let Some(mut child) = SERVER_PROCESS.lock().unwrap().take() {
+        debug!("Terminating server process");
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
 static SERVER_NAME: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
+
+struct ServerProcessGuard;
+
+impl Drop for ServerProcessGuard {
+    fn drop(&mut self) {
+        cleanup_server_process();
+    }
+}
+
+static _SERVER_GUARD: Lazy<ServerProcessGuard> = Lazy::new(|| ServerProcessGuard);
 
 fn extract_dictionary() {
     let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
@@ -199,6 +224,8 @@ async fn main() {
     let server_name = start_server_process();
     SERVER_NAME.lock().unwrap().replace(server_name);
 
+    Lazy::force(&_SERVER_GUARD);
+
     extract_dictionary();
 
     tauri::Builder::default()
@@ -222,7 +249,8 @@ async fn main() {
             open_ms_settings_regionlanguage_jpnime,
             load_dictionary,
             save_dictionary,
-            check_update
+            check_update,
+            register_manifest,
         ])
         .setup(|app| {
             APP_HANDLE.set(app.app_handle().to_owned()).unwrap();
@@ -259,6 +287,17 @@ async fn main() {
 
             Ok(())
         })
+        .on_window_event(|_window, event| match event {
+            tauri::WindowEvent::CloseRequested { .. } => {
+                cleanup_server_process();
+            }
+            tauri::WindowEvent::Destroyed => {
+                cleanup_server_process();
+            }
+            _ => {}
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    cleanup_server_process();
 }

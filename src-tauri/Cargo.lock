@@ -4987,6 +4987,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "wana_kana",
+ "winapi",
  "windows 0.56.0",
  "windows-core 0.56.0",
  "zip",
