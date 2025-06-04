@@ -270,7 +270,7 @@ impl AzookeyConversion {
         trace!("Retrieved candidates: {:?}", candidates);
 
         // Include raw text in candidates
-        candidates.insert(0, diff_text.to_string());
+        candidates.insert(1, diff_text.to_string());
 
         // Limit number of candidates (for safety)
         if candidates.len() > MAX_CANDIDATES {
