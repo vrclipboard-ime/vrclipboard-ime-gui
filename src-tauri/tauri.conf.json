@@ -1,58 +1,36 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "vrclipboard-ime-gui",
+  "version": "0.1.0",
+  "identifier": "dev.mii.vrclipboard-ime-gui",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420"
+    "beforeDevCommand": "trunk serve",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "trunk build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "vrclipboard-ime-gui",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
-    "resources": {
-      "resources/*": ""
-    },
     "active": true,
     "targets": "all",
-    "windows": {
-      "wix": {
-        "language": "ja-JP"
-      }
-    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "createUpdaterArtifacts": "v1Compatible"
-  },
-  "productName": "vrclipboard-ime-gui",
-  "mainBinaryName": "vrclipboard-ime-gui",
-  "version": "1.12.0",
-  "identifier": "dev.mii.vrclipboard-ime",
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5QTI2MDRDNTlENUY5OEMKUldTTStkVlpUR0NpcVIrMXZqOHFpNzNXMFVKT0d3aHJIWFlOUVJubGN5VTAzUkVwYW95bVlMYUQK",
-      "endpoints": [
-        "https://r2-vrime.mii.dev/release.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  },
-  "app": {
-    "security": {
-      "csp": null
-    },
-    "windows": [
-      {
-        "title": "VRClipboard IME",
-        "width": 800,
-        "height": 640,
-        "visible": true,
-        "decorations": false,
-        "transparent": true
-      }
     ]
   }
 }
