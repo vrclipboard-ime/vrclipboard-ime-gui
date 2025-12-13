@@ -1,4 +1,5 @@
 use tracing::{debug, info, trace};
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::Input::Ime::{
     FELANG_CMODE_HIRAGANAOUT, FELANG_CMODE_NOINVISIBLECHAR, FELANG_CMODE_PRECONV,
     FELANG_CMODE_ROMAN, FELANG_REQ_CONV,
@@ -11,6 +12,7 @@ use super::converter::Converter;
 pub struct RomanToKanjiConverter;
 
 impl Converter for RomanToKanjiConverter {
+    #[cfg(target_os = "windows")]
     fn convert(&self, text: &str) -> anyhow::Result<String> {
         debug!("Converting roman to kanji: {}", text);
         let felanguage = FElanguage::new()?;
@@ -31,6 +33,14 @@ impl Converter for RomanToKanjiConverter {
         }
 
         result
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn convert(&self, text: &str) -> anyhow::Result<String> {
+        debug!("Convert method called on non-Windows platform");
+        Err(anyhow::anyhow!(
+            "Roman to Kanji conversion is only supported on Windows."
+        ))
     }
 
     fn name(&self) -> String {

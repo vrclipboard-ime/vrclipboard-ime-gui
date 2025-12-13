@@ -2,6 +2,7 @@ use std::ptr;
 
 use anyhow::Result;
 use tracing::{debug, error, info, trace};
+#[cfg(target_os = "windows")]
 use windows::{
     core::{w, PCWSTR},
     Win32::{
@@ -11,12 +12,14 @@ use windows::{
 };
 
 pub struct FElanguage {
+    #[cfg(target_os = "windows")]
     ife: IFELanguage,
 }
 
 impl Drop for FElanguage {
     fn drop(&mut self) {
         debug!("Dropping FElanguage instance");
+        #[cfg(target_os = "windows")]
         if let Err(e) = unsafe { self.ife.Close() } {
             error!("Error closing IFELanguage: {:?}", e);
         }
@@ -24,6 +27,7 @@ impl Drop for FElanguage {
 }
 
 impl FElanguage {
+    #[cfg(target_os = "windows")]
     pub fn new() -> Result<Self> {
         info!("Creating new FElanguage instance");
         let clsid = unsafe {
@@ -42,6 +46,12 @@ impl FElanguage {
         Ok(FElanguage { ife })
     }
 
+    #[cfg(not(target_os = "windows"))]
+    pub fn new() -> Result<Self> {
+        unimplemented!("FElanguage is only implemented for Windows");
+    }
+
+    #[cfg(target_os = "windows")]
     pub fn j_morph_result(&self, input: &str, request: u32, mode: u32) -> Result<String> {
         debug!(
             "Calling j_morph_result with input: {}, request: {}, mode: {}",
@@ -84,5 +94,10 @@ impl FElanguage {
 
         trace!("j_morph_result output: {}", output_string);
         Ok(output_string)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn j_morph_result(&self, _input: &str, _request: u32, _mode: u32) -> Result<String> {
+        unimplemented!("j_morph_result is only implemented for Windows");
     }
 }

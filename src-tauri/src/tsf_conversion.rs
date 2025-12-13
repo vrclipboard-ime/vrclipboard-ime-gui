@@ -1,3 +1,4 @@
+#[cfg(target_os = "windows")]
 use crate::{
     converter::{
         converter::Converter, hiragana::HiraganaConverter, roman_to_kanji::RomanToKanjiConverter,
@@ -7,6 +8,7 @@ use crate::{
 use anyhow::Result;
 use tracing::{debug, error, info, trace};
 
+#[cfg(target_os = "windows")]
 pub struct TsfConversion {
     pub conversion_history: Vec<String>,
     pub clipboard_history: Vec<String>,
@@ -18,6 +20,7 @@ pub struct TsfConversion {
     pub reconversion_prefix: Option<String>,
 }
 
+#[cfg(target_os = "windows")]
 impl TsfConversion {
     pub fn new() -> Self {
         info!("Creating new TsfConversion instance");
@@ -233,5 +236,20 @@ impl TsfConversion {
 
         error!("Failed to convert: {}", text);
         Err(anyhow::anyhow!("Failed to convert"))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub struct TsfConversion;
+
+#[cfg(not(target_os = "windows"))]
+impl TsfConversion {
+    pub fn new() -> Self {
+        Self
+    }
+    pub fn convert(&mut self, _text: &str) -> Result<String> {
+        Err(anyhow::anyhow!(
+            "TsfConversion is only supported on Windows."
+        ))
     }
 }

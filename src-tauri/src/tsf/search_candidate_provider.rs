@@ -1,5 +1,6 @@
 use anyhow::Result;
 use tracing::{debug, error, info, trace};
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::TextServices::{
     ITfFnSearchCandidateProvider, TF_TMAE_NOACTIVATEKEYBOARDLAYOUT,
 };
@@ -10,9 +11,11 @@ use super::{
 };
 
 pub struct SearchCandidateProvider {
+    #[cfg(target_os = "windows")]
     search_candidate_provider: ITfFnSearchCandidateProvider,
 }
 
+#[cfg(target_os = "windows")]
 impl SearchCandidateProvider {
     pub fn new(search_candidate_provider: ITfFnSearchCandidateProvider) -> Self {
         debug!("Creating new SearchCandidateProvider");
@@ -79,5 +82,13 @@ impl SearchCandidateProvider {
             .collect();
         info!("Retrieved {} candidates", candidates.len());
         Ok(candidates)
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl SearchCandidateProvider {
+    pub fn new() -> Self {
+        debug!("SearchCandidateProvider is not implemented on this OS");
+        Self {}
     }
 }

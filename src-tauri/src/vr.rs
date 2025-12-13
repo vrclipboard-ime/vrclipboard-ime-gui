@@ -7,6 +7,7 @@ use crate::SELF_EXE_PATH;
 
 const APP_KEY: &str = "dev.mii.vrclipboardime";
 
+#[cfg(target_os = "windows")]
 pub fn create_vrmanifest() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting VR manifest file creation");
 
@@ -60,6 +61,7 @@ pub fn create_vrmanifest() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
 pub fn register_manifest_with_openvr() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting OpenVR manifest registration using proper method");
 
@@ -105,6 +107,7 @@ pub fn register_manifest_with_openvr() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
 fn get_steam_config_directory() -> Result<PathBuf, Box<dyn std::error::Error>> {
     info!("Searching for Steam configuration directory");
 
@@ -146,6 +149,7 @@ fn get_steam_config_directory() -> Result<PathBuf, Box<dyn std::error::Error>> {
     Err("Steam configuration directory not found".into())
 }
 
+#[cfg(target_os = "windows")]
 fn get_steam_path_from_registry() -> Result<PathBuf, Box<dyn std::error::Error>> {
     debug!("Reading Steam path from registry");
 

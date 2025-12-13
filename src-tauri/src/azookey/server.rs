@@ -145,15 +145,18 @@ impl AzookeyConversionServer {
                     self.composing_text.insert_at_cursor_position(&text);
                 }
                 Ok(IpcMessage::RequestCandidates(context)) => {
-                    let candidates = self.azookey_converter.request_candidates(
-                        &self.composing_text,
-                        &context,
-                        &extract_path,
-                        &weight_path,
-                    );
-                    if let Some(s) = sender.as_ref() {
-                        let candidates = Self::post_process_candidates(candidates);
-                        s.send(IpcMessage::Candidates(candidates)).unwrap();
+                    #[cfg(target_os = "windows")]
+                    {
+                        let candidates = self.azookey_converter.request_candidates(
+                            &self.composing_text,
+                            &context,
+                            &extract_path,
+                            &weight_path,
+                        );
+                        if let Some(s) = sender.as_ref() {
+                            let candidates = Self::post_process_candidates(candidates);
+                            s.send(IpcMessage::Candidates(candidates)).unwrap();
+                        }
                     }
                 }
                 Ok(IpcMessage::End) => {

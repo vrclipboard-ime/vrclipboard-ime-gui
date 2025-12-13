@@ -139,8 +139,11 @@ async fn check_update() -> Result<bool, String> {
 
 #[tauri::command]
 async fn register_manifest() -> Result<(), String> {
-    vr::create_vrmanifest().unwrap();
-    vr::register_manifest_with_openvr().unwrap();
+    #[cfg(target_os = "windows")]
+    {
+        vr::create_vrmanifest().unwrap();
+        vr::register_manifest_with_openvr().unwrap();
+    }
     Ok(())
 }
 

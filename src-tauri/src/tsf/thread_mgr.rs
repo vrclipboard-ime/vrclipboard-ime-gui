@@ -1,14 +1,17 @@
 use anyhow::Result;
 use tracing::{debug, error, info};
+#[cfg(target_os = "windows")]
 use windows::Win32::{
     System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
     UI::TextServices::{CLSID_TF_ThreadMgr, ITfFunctionProvider, ITfThreadMgr2},
 };
 
 pub struct ThreadMgr {
+    #[cfg(target_os = "windows")]
     pub thread_mgr: ITfThreadMgr2,
 }
 
+#[cfg(target_os = "windows")]
 impl ThreadMgr {
     pub fn new() -> Result<Self> {
         debug!("Creating new ThreadMgr");
@@ -41,5 +44,13 @@ impl ThreadMgr {
                 Err(e.into())
             }
         }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl ThreadMgr {
+    pub fn new() -> Result<Self> {
+        debug!("ThreadMgr is not implemented on this OS");
+        Ok(ThreadMgr {})
     }
 }

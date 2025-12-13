@@ -15,6 +15,7 @@ use regex::Regex;
 use rosc::{encoder, OscMessage, OscPacket, OscType};
 use tauri::{AppHandle, Emitter};
 use tracing::{error, info, warn};
+#[cfg(target_os = "windows")]
 use windows::Win32::System::DataExchange::GetClipboardOwner;
 
 pub struct ConversionHandler {
@@ -50,8 +51,14 @@ impl ConversionHandler {
 }
 
 impl ConversionHandler {
+    #[cfg(target_os = "windows")]
     fn clipboard_has_owner(&mut self) -> bool {
         unsafe { GetClipboardOwner() }.0 != 0
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn clipboard_has_owner(&mut self) -> bool {
+        false
     }
 
     fn azookey_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {

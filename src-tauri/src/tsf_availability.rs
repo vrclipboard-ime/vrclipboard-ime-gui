@@ -1,8 +1,12 @@
 use anyhow::Result;
 use tracing::{error, info};
 
-use crate::tsf::{search_candidate_provider::SearchCandidateProvider, set_thread_local_input_settings};
+#[cfg(target_os = "windows")]
+use crate::tsf::{
+    search_candidate_provider::SearchCandidateProvider, set_thread_local_input_settings,
+};
 
+#[cfg(target_os = "windows")]
 pub fn check_tsf_availability() -> Result<bool> {
     info!("Checking TSF availability");
 
@@ -21,4 +25,9 @@ pub fn check_tsf_availability() -> Result<bool> {
             Ok(false)
         }
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn check_tsf_availability() -> Result<bool> {
+    unimplemented!("TSF availability check is only implemented for Windows");
 }

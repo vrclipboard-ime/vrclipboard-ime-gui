@@ -1,4 +1,5 @@
 use tracing::{debug, info, trace};
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::Input::Ime::{
     FELANG_CMODE_KATAKANAOUT, FELANG_CMODE_NOINVISIBLECHAR, FELANG_CMODE_PRECONV, FELANG_REQ_REV,
 };
@@ -11,6 +12,7 @@ use super::converter::Converter;
 pub struct KatakanaConverter;
 
 impl Converter for KatakanaConverter {
+    #[cfg(target_os = "windows")]
     fn convert(&self, text: &str) -> anyhow::Result<String> {
         debug!("Converting to katakana: {}", text);
         let felanguage = FElanguage::new()?;
@@ -28,6 +30,12 @@ impl Converter for KatakanaConverter {
         }
 
         result
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn convert(&self, text: &str) -> anyhow::Result<String> {
+        debug!("Converting to katakana (no-op on non-Windows): {}", text);
+        Ok(text.to_string())
     }
 
     fn name(&self) -> String {

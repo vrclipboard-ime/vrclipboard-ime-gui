@@ -1,5 +1,6 @@
 use anyhow::Result;
 use tracing::{debug, error, info};
+#[cfg(target_os = "windows")]
 use windows::{
     core::Interface,
     Win32::UI::TextServices::{ITfFnSearchCandidateProvider, ITfFunctionProvider},
@@ -8,9 +9,11 @@ use windows::{
 use super::search_candidate_provider::SearchCandidateProvider;
 
 pub struct FunctionProvider {
+    #[cfg(target_os = "windows")]
     function_provider: ITfFunctionProvider,
 }
 
+#[cfg(target_os = "windows")]
 impl FunctionProvider {
     pub fn new(function_provider: ITfFunctionProvider) -> Self {
         debug!("Creating new FunctionProvider");
@@ -42,5 +45,13 @@ impl FunctionProvider {
                 Err(e.into())
             }
         }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl FunctionProvider {
+    pub fn new() -> Self {
+        debug!("FunctionProvider is not implemented on this OS");
+        Self {}
     }
 }

@@ -5,10 +5,10 @@ use std::{
 };
 
 use anyhow::Result;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use tracing::{debug, error, info, trace};
-use regex::Regex;
 
 use crate::{
     config::Config,
@@ -78,7 +78,10 @@ impl Dictionary {
         file.read_to_string(&mut contents)?;
         trace!("Raw dictionary contents: {}", contents);
         let dictionary: Dictionary = serde_yaml::from_str(&contents)?;
-        debug!("Dictionary loaded successfully with {} entries", dictionary.entries.len());
+        debug!(
+            "Dictionary loaded successfully with {} entries",
+            dictionary.entries.len()
+        );
         Ok(dictionary)
     }
 
@@ -134,8 +137,6 @@ impl Dictionary {
 
     pub fn apply_conversion(&self, text: &str) -> Result<String> {
         debug!("Applying dictionary conversions to: {}", text);
-
-        
 
         todo!()
     }

@@ -1,21 +1,21 @@
 use anyhow::Result;
 use tracing::{debug, error, info};
+#[cfg(target_os = "windows")]
 use windows::Win32::{
     System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
-    UI::{
-        TextServices::{
-            HKL,
-            CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr, GUID_TFCAT_TIP_KEYBOARD,
-            TF_INPUTPROCESSORPROFILE, TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
-            TF_PROFILETYPE_INPUTPROCESSOR,
-        },
+    UI::TextServices::{
+        CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr, GUID_TFCAT_TIP_KEYBOARD, HKL,
+        TF_INPUTPROCESSORPROFILE, TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
+        TF_PROFILETYPE_INPUTPROCESSOR,
     },
 };
 
 pub struct InputProcessorProfileMgr {
+    #[cfg(target_os = "windows")]
     input_processor_profile_mgr: ITfInputProcessorProfileMgr,
 }
 
+#[cfg(target_os = "windows")]
 impl InputProcessorProfileMgr {
     pub fn new() -> Result<Self> {
         debug!("Creating new InputProcessorProfileMgr");
@@ -69,5 +69,15 @@ impl InputProcessorProfileMgr {
                 Err(e.into())
             }
         }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl InputProcessorProfileMgr {
+    pub fn new() -> Result<Self> {
+        debug!("InputProcessorProfileMgr is not implemented on this OS");
+        Err(anyhow::anyhow!(
+            "InputProcessorProfileMgr is not implemented on this OS"
+        ))
     }
 }
