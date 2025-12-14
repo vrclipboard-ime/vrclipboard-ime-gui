@@ -296,7 +296,7 @@ async fn main() {
 
                 let mut master = Master::new(conversion_handler);
 
-                master.run().unwrap();
+                master.unwrap().run().unwrap();
             });
 
             Ok(())

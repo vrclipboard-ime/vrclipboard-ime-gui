@@ -27,6 +27,7 @@ pub struct ConversionHandler {
     azookey_conversion: Option<AzookeyConversion>,
     clipboard_ctx: ClipboardContext,
     last_text: String,
+    last_copy: String,
 }
 
 impl ConversionHandler {
@@ -46,6 +47,7 @@ impl ConversionHandler {
             azookey_conversion,
             clipboard_ctx,
             last_text: String::new(),
+            last_copy: String::new(),
         })
     }
 
@@ -214,6 +216,16 @@ impl ClipboardHandler for ConversionHandler {
         }
 
         if let Ok(mut contents) = self.clipboard_ctx.get_contents() {
+            if self.last_copy == contents {
+                return CallbackResult::Next;
+            }
+            self.last_copy = contents.clone();
+            info!("Clipboard changed: {}", contents);
+            contents = contents
+                .chars()
+                .take_while(|&c| c != '\u{0000}')
+                .collect::<String>();
+
             if config.use_azookey_conversion {
                 if let Err(e) = self.azookey_conversion(&contents, &config) {
                     error!("Azookey conversion failed: {}", e);
@@ -254,6 +266,8 @@ impl ClipboardHandler for ConversionHandler {
                     };
 
                     self.last_text = converted.clone();
+
+                    info!("Conversion: {} -> {}", parsed_contents, converted);
 
                     self.return_conversion(parsed_contents, converted, &config);
                 } else {
