@@ -26,8 +26,3 @@ pub fn check_tsf_availability() -> Result<bool> {
         }
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-pub fn check_tsf_availability() -> Result<bool> {
-    unimplemented!("TSF availability check is only implemented for Windows");
-}

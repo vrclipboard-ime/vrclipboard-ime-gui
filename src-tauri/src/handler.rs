@@ -1,10 +1,11 @@
 use std::net::UdpSocket;
 
+#[cfg(target_os = "windows")]
+use crate::tsf_conversion::TsfConversion;
 use crate::{
     azookey::{azookey_conversion::AzookeyConversion, client::AzookeyConversionClient},
     config::{Config, OnCopyMode},
     conversion::Conversion,
-    tsf_conversion::TsfConversion,
     Log, SERVER_NAME, STATE,
 };
 use anyhow::Result;
@@ -21,6 +22,7 @@ use windows::Win32::System::DataExchange::GetClipboardOwner;
 pub struct ConversionHandler {
     app_handle: AppHandle,
     conversion: Conversion,
+    #[cfg(target_os = "windows")]
     tsf_conversion: Option<TsfConversion>,
     azookey_conversion: Option<AzookeyConversion>,
     clipboard_ctx: ClipboardContext,
@@ -30,6 +32,7 @@ pub struct ConversionHandler {
 impl ConversionHandler {
     pub fn new(app_handle: AppHandle) -> Result<Self> {
         let conversion = Conversion::new();
+        #[cfg(target_os = "windows")]
         let tsf_conversion = None;
         let azookey_conversion = None;
         let clipboard_ctx = ClipboardProvider::new().unwrap();
@@ -38,6 +41,7 @@ impl ConversionHandler {
         Ok(Self {
             app_handle,
             conversion,
+            #[cfg(target_os = "windows")]
             tsf_conversion,
             azookey_conversion,
             clipboard_ctx,
@@ -100,6 +104,7 @@ impl ConversionHandler {
         Ok(())
     }
 
+    #[cfg(target_os = "windows")]
     fn tsf_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {
         if contents.chars().count() > 140 {
             info!("Content exceeds 140 characters, skipping TSF conversion");
@@ -218,6 +223,7 @@ impl ClipboardHandler for ConversionHandler {
             }
 
             if config.use_tsf_reconvert {
+                #[cfg(target_os = "windows")]
                 if let Err(e) = self.tsf_conversion(&contents, &config) {
                     error!("TSF conversion failed: {}", e);
                 }

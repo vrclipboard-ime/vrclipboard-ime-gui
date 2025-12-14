@@ -25,10 +25,3 @@ impl Com {
         Ok(Com)
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-impl Com {
-    pub fn new() -> Result<Self> {
-        unimplemented!("Com is only implemented for Windows");
-    }
-}

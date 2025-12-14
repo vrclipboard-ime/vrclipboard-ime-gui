@@ -46,11 +46,6 @@ impl FElanguage {
         Ok(FElanguage { ife })
     }
 
-    #[cfg(not(target_os = "windows"))]
-    pub fn new() -> Result<Self> {
-        unimplemented!("FElanguage is only implemented for Windows");
-    }
-
     #[cfg(target_os = "windows")]
     pub fn j_morph_result(&self, input: &str, request: u32, mode: u32) -> Result<String> {
         debug!(
@@ -94,10 +89,5 @@ impl FElanguage {
 
         trace!("j_morph_result output: {}", output_string);
         Ok(output_string)
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    pub fn j_morph_result(&self, _input: &str, _request: u32, _mode: u32) -> Result<String> {
-        unimplemented!("j_morph_result is only implemented for Windows");
     }
 }

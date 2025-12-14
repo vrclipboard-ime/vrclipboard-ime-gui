@@ -238,18 +238,3 @@ impl TsfConversion {
         Err(anyhow::anyhow!("Failed to convert"))
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-pub struct TsfConversion;
-
-#[cfg(not(target_os = "windows"))]
-impl TsfConversion {
-    pub fn new() -> Self {
-        Self
-    }
-    pub fn convert(&mut self, _text: &str) -> Result<String> {
-        Err(anyhow::anyhow!(
-            "TsfConversion is only supported on Windows."
-        ))
-    }
-}

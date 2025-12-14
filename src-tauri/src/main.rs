@@ -38,6 +38,7 @@ use tauri_emit_subscriber::TauriEmitSubscriber;
 use tauri_plugin_updater::UpdaterExt;
 use tracing::{debug, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+#[cfg(target_os = "windows")]
 use tsf_availability::check_tsf_availability;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,12 +79,21 @@ fn save_settings(config: Config, state: State<AppState>) -> Result<(), String> {
 #[tauri::command]
 fn check_tsf_availability_command() -> Result<bool, String> {
     debug!("Checking TSF availability");
-    match check_tsf_availability() {
-        Ok(result) => {
-            debug!("TSF availability check result: {}", result);
-            Ok(result)
+    #[cfg(target_os = "windows")]
+    {
+        match check_tsf_availability() {
+            Ok(result) => {
+                debug!("TSF availability check result: {}", result);
+                Ok(result)
+            }
+            Err(e) => Err(format!("Failed to check TSF availability: {}", e)),
         }
-        Err(e) => Err(format!("Failed to check TSF availability: {}", e)),
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        debug!("TSF availability check is not supported on this OS");
+        Ok(false)
     }
 }
 
@@ -279,6 +289,7 @@ async fn main() {
             });
 
             std::thread::spawn(move || {
+                #[cfg(target_os = "windows")]
                 let _com = Com::new().unwrap();
 
                 let conversion_handler = ConversionHandler::new(app_handle).unwrap();
