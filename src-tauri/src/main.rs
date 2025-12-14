@@ -226,7 +226,7 @@ async fn main() {
 
     SELF_EXE_PATH.write().unwrap().push_str(&args[0]);
 
-    if args.contains(&"server".to_string()) {
+    /*if args.contains(&"server".to_string()) {
         let server = AzookeyConversionServer::new();
         let server_name = &server.server_name;
         println!("${}$", server_name);
@@ -237,7 +237,7 @@ async fn main() {
     let server_name = start_server_process();
     SERVER_NAME.lock().unwrap().replace(server_name);
 
-    Lazy::force(&_SERVER_GUARD);
+    Lazy::force(&_SERVER_GUARD);*/
 
     extract_dictionary();
 

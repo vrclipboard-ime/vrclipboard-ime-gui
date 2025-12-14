@@ -124,6 +124,8 @@ impl AzookeyConversionServer {
             .join("AzooKeyDictionary\\AzooKeyDictionary\\Dictionary");
         let extract_path = path.to_str().unwrap();
 
+        println!("Extract path: {}", extract_path);
+
         let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
         let weight_path = self_exe_path
             .parent()

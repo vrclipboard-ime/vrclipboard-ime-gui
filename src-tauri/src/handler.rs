@@ -84,8 +84,7 @@ impl ConversionHandler {
         }
 
         if self.azookey_conversion.is_none() {
-            let server_name = SERVER_NAME.lock().unwrap().clone().unwrap();
-            let client = AzookeyConversionClient::new(server_name.clone());
+            let client = AzookeyConversionClient::new();
             let conversion = AzookeyConversion::new(client);
             self.azookey_conversion = Some(conversion);
             info!("Azookey conversion created");
