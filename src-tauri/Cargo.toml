@@ -29,7 +29,7 @@ regex = "1"
 tracing = "0.1"
 tracing-appender = "0.2"
 tauri-plugin-shell = "2.0.0-rc"
-azookey-binding = { path = "../../rs-azookey-binding" }
+azookey-binding = { path = "./rs-azookey-binding" }
 tokio = { version = "1.44.2", features = ["full"] }
 ipc-channel = "0.19.0"
 zip = "2.6.1"
