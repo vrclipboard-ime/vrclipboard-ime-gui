@@ -1,9 +1,12 @@
 use std::net::UdpSocket;
 
+#[cfg(feature = "azookey")]
+use crate::azookey::{azookey_conversion::AzookeyConversion, client::AzookeyConversionClient};
+#[cfg(feature = "karukan")]
+use crate::karukan::karukan_conversion::KarukanConversion;
 #[cfg(target_os = "windows")]
 use crate::tsf_conversion::TsfConversion;
 use crate::{
-    azookey::{azookey_conversion::AzookeyConversion, client::AzookeyConversionClient},
     config::{Config, OnCopyMode},
     conversion::Conversion,
     Log, SERVER_NAME, STATE,
@@ -24,7 +27,10 @@ pub struct ConversionHandler {
     conversion: Conversion,
     #[cfg(target_os = "windows")]
     tsf_conversion: Option<TsfConversion>,
+    #[cfg(feature = "azookey")]
     azookey_conversion: Option<AzookeyConversion>,
+    #[cfg(feature = "karukan")]
+    karukan_conversion: Option<KarukanConversion>,
     clipboard_ctx: ClipboardContext,
     last_text: String,
     last_copy: String,
@@ -35,7 +41,10 @@ impl ConversionHandler {
         let conversion = Conversion::new();
         #[cfg(target_os = "windows")]
         let tsf_conversion = None;
+        #[cfg(feature = "azookey")]
         let azookey_conversion = None;
+        #[cfg(feature = "karukan")]
+        let karukan_conversion = None;
         let clipboard_ctx = ClipboardProvider::new().unwrap();
 
         info!("ConversionHandler created");
@@ -44,7 +53,10 @@ impl ConversionHandler {
             conversion,
             #[cfg(target_os = "windows")]
             tsf_conversion,
+            #[cfg(feature = "azookey")]
             azookey_conversion,
+            #[cfg(feature = "karukan")]
+            karukan_conversion,
             clipboard_ctx,
             last_text: String::new(),
             last_copy: String::new(),
@@ -67,6 +79,7 @@ impl ConversionHandler {
         false
     }
 
+    #[cfg(feature = "azookey")]
     fn azookey_conversion(&mut self, contents: &str, config: &Config) -> Result<()> {
         if contents.chars().count() > 140 {
             info!("Content exceeds 140 characters, skipping Azookey conversion");
@@ -101,6 +114,28 @@ impl ConversionHandler {
         self.last_text = contents.to_string().clone();
 
         self.return_conversion(contents.to_string(), converted, config);
+
+        Ok(())
+    }
+
+    #[cfg(feature = "karukan")]
+    fn karukan_convrsion(&mut self, contents: &str, config: &Config) -> Result<()> {
+        if contents.chars().count() > 140 {
+            info!("Content exceeds 140 characters, skipping Karukan conversion");
+            return Ok(());
+        }
+        if contents.is_empty() {
+            info!("Empty content, skipping Karukan conversion");
+            return Ok(());
+        }
+        if config.skip_url
+            && Regex::new(r"(http://|https://){1}[\w\.\-/:\#\?=\&;%\~\+]+")
+                .unwrap()
+                .is_match(&contents)
+        {
+            info!("URL detected, skipping Karukan conversion");
+            return Ok(());
+        }
 
         Ok(())
     }
@@ -226,12 +261,20 @@ impl ClipboardHandler for ConversionHandler {
                 .take_while(|&c| c != '\u{0000}')
                 .collect::<String>();
 
+            #[cfg(feature = "azookey")]
             if config.use_azookey_conversion {
                 if let Err(e) = self.azookey_conversion(&contents, &config) {
                     error!("Azookey conversion failed: {}", e);
                 }
                 return CallbackResult::Next;
             }
+            #[cfg(not(feature = "azookey"))]
+            if config.use_azookey_conversion {
+                return CallbackResult::Next;
+            }
+
+            #[cfg(feature = "karukan")]
+            if config.use_karukan_conversion {}
 
             if config.use_tsf_reconvert {
                 #[cfg(target_os = "windows")]

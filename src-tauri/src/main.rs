@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(feature = "azookey")]
 mod azookey;
 mod com;
 mod config;
@@ -9,13 +10,14 @@ mod converter;
 mod dictionary;
 mod felanguage;
 mod handler;
+#[cfg(feature = "karukan")]
+mod karukan;
 mod tauri_emit_subscriber;
 mod transform_rule;
 mod tsf;
 mod tsf_availability;
 mod tsf_conversion;
 mod vr;
-
 use std::{
     io::{BufRead, BufReader},
     path::PathBuf,
@@ -23,6 +25,7 @@ use std::{
     sync::{Mutex, OnceLock, RwLock},
 };
 
+#[cfg(feature = "azookey")]
 use azookey::server::AzookeyConversionServer;
 use once_cell::sync::Lazy;
 use platform_dirs::AppDirs;

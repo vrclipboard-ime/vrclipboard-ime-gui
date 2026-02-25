@@ -10,7 +10,8 @@ export interface Config {
   on_copy_mode: OnCopyMode;
   skip_url: boolean;
   use_tsf_reconvert: boolean;
-  use_azookey_conversion: boolean; // 新しい設定を追加
+  use_azookey_conversion: boolean;
+  use_karukan_conversion: boolean;
   skip_on_out_of_vrc: boolean;
   tsf_announce?: boolean;
 }
@@ -105,7 +106,8 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     on_copy_mode: OnCopyMode.ReturnToChatbox,
     skip_url: true,
     use_tsf_reconvert: false,
-    use_azookey_conversion: false, // 初期値を追加
+    use_azookey_conversion: false,
+	use_karukan_conversion: false,
     skip_on_out_of_vrc: true,
   });
   const [isOpen, setIsOpen] = useState(false);
@@ -186,7 +188,8 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       const newSettings = {
         ...settings,
         use_tsf_reconvert: true,
-        use_azookey_conversion: false
+        use_azookey_conversion: false,
+		use_karukan_conversion: false
       };
       setSettings(newSettings);
       saveSettings(newSettings);
@@ -202,6 +205,16 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       setSettings(newSettings);
       saveSettings(newSettings);
     }
+	else if (name === "use_karukan_conversion" && checked) {
+	  const newSettings = {
+        ...settings,
+        use_azookey_conversion: false,
+		use_karukan_conversion: true,
+        use_tsf_reconvert: false
+      };
+      setSettings(newSettings);
+      saveSettings(newSettings);
+	}
     // どちらかがオフになった場合はそのまま状態を更新
     else {
       const newSettings = {
@@ -251,7 +264,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
   };
 
   const isInputDisabled = () => {
-    return settings.use_tsf_reconvert || settings.use_azookey_conversion;
+    return settings.use_tsf_reconvert || settings.use_azookey_conversion || settings.use_karukan_conversion;
   };
 
   const handleRegisterManifest = async () => {
@@ -402,6 +415,25 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                   CPU負荷は高くなりますが、変換精度が向上します。
                 </p>
               </div>
+
+			  <div className="mt-2">
+                <CheckboxField
+                  id="use_karukan_conversion"
+                  name="use_karukan_conversion"
+                  label={
+                    <span>
+                      <span className="text-indigo-600 dark:text-indigo-400 font-medium transition-colors">Karukan変換</span>
+                    </span>
+                  }
+                  checked={settings.use_karukan_conversion}
+                  onChange={handleConversionChange}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
+                  Karukan変換機能を使用します。有効にすると区切り、モード変更、開始文字が無効化されます。<br />
+                  CPU負荷は高くなりますが、変換精度が向上します。
+                </p>
+              </div>
+
 
               <div className="mt-3">
                 <CheckboxField
