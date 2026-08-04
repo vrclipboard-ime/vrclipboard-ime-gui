@@ -36,8 +36,6 @@ pub struct Config {
     #[serde(default = "bool_false")]
     pub use_azookey_conversion: bool,
     #[serde(default = "bool_false")]
-    pub use_karukan_conversion: bool,
-    #[serde(default = "bool_false")]
     pub azookey_announce: bool,
 }
 
@@ -51,7 +49,6 @@ impl Default for Config {
             on_copy_mode: OnCopyMode::ReturnToChatbox,
             skip_url: true,
             use_tsf_reconvert: false,
-            use_karukan_conversion: true,
             skip_on_out_of_vrc: true,
             tsf_announce: false,
             use_azookey_conversion: false,

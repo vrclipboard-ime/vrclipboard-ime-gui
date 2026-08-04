@@ -10,8 +10,6 @@ mod converter;
 mod dictionary;
 mod felanguage;
 mod handler;
-#[cfg(feature = "karukan")]
-mod karukan;
 mod tauri_emit_subscriber;
 mod transform_rule;
 mod tsf;

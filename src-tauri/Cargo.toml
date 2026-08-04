@@ -35,7 +35,6 @@ ipc-channel = "0.19.0"
 zip = "8.1.0"
 wana_kana = "4.0.0"
 itertools = "0.14.0"
-karukan-engine = { git = "https://github.com/vrclipboard-ime/karukan", rev = "a228991", optional = true }
 
 [dependencies.tracing-subscriber]
 version = "0.3.16"
@@ -78,10 +77,9 @@ features = [
 
 
 [features]
-default = ["karukan"]
+default = []
 custom-protocol = ["tauri/custom-protocol"]
 azookey = ["dep:azookey-binding"]
-karukan = ["dep:karukan-engine"]
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.0.0-rc"
