@@ -29,12 +29,8 @@ regex = "1"
 tracing = "0.1"
 tracing-appender = "0.2"
 tauri-plugin-shell = "2.0.0-rc"
-azookey-binding = { path = "./rs-azookey-binding", optional = true }
+azookey-kkc = { git = "https://github.com/vrclipboard-ime/azookey-kkc-rs.git", rev = "72c0a08cdcf97097dec270a54fbf7dbd81a35d3f", optional = true }
 tokio = { version = "1.44.2", features = ["full"] }
-ipc-channel = "0.19.0"
-zip = "8.1.0"
-wana_kana = "4.0.0"
-itertools = "0.14.0"
 
 [dependencies.tracing-subscriber]
 version = "0.3.16"
@@ -77,9 +73,9 @@ features = [
 
 
 [features]
-default = []
+default = ["azookey"]
 custom-protocol = ["tauri/custom-protocol"]
-azookey = ["dep:azookey-binding"]
+azookey = ["dep:azookey-kkc"]
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.0.0-rc"

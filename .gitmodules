@@ -1,3 +1,0 @@
-[submodule "src-tauri/rs-azookey-binding"]
-	path = src-tauri/rs-azookey-binding
-	url = git@github.com:vrclipboard-ime/rs-azookey-binding.git

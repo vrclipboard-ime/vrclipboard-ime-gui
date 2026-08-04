@@ -16,17 +16,9 @@ mod tsf;
 mod tsf_availability;
 mod tsf_conversion;
 mod vr;
-use std::{
-    io::{BufRead, BufReader},
-    path::PathBuf,
-    process::Stdio,
-    sync::{Mutex, OnceLock, RwLock},
-};
+use std::sync::{Mutex, OnceLock};
 
-#[cfg(feature = "azookey")]
-use azookey::server::AzookeyConversionServer;
 use once_cell::sync::Lazy;
-use platform_dirs::AppDirs;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
@@ -57,7 +49,6 @@ struct AppState {
 static STATE: Lazy<Mutex<Config>> = Lazy::new(|| Mutex::new(Config::load().unwrap()));
 static DICTIONARY: Lazy<Mutex<Dictionary>> = Lazy::new(|| Mutex::new(Dictionary::load().unwrap()));
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
-static SERVER_PROCESS: Lazy<Mutex<Option<std::process::Child>>> = Lazy::new(|| Mutex::new(None));
 
 #[tauri::command]
 fn load_settings(state: State<AppState>) -> Result<Config, String> {
@@ -158,90 +149,8 @@ async fn register_manifest() -> Result<(), String> {
     Ok(())
 }
 
-fn start_server_process() -> String {
-    let exe_path = std::env::current_exe().unwrap();
-    let server_path = exe_path.to_str().unwrap();
-
-    let mut command = std::process::Command::new(server_path);
-    command.arg("server");
-
-    let mut child = command.stdout(Stdio::piped()).spawn().unwrap();
-
-    let stdout = child.stdout.take().unwrap();
-    let reader = BufReader::new(stdout);
-
-    let mut server_name = String::new();
-    for line in reader.lines() {
-        let line = line.unwrap();
-        if line.starts_with("$") {
-            server_name = line[1..line.len() - 1].to_string();
-            break;
-        }
-    }
-
-    *SERVER_PROCESS.lock().unwrap() = Some(child);
-
-    server_name
-}
-
-fn cleanup_server_process() {
-    if let Some(mut child) = SERVER_PROCESS.lock().unwrap().take() {
-        debug!("Terminating server process");
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-}
-
-static SERVER_NAME: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
-
-struct ServerProcessGuard;
-
-impl Drop for ServerProcessGuard {
-    fn drop(&mut self) {
-        cleanup_server_process();
-    }
-}
-
-static _SERVER_GUARD: Lazy<ServerProcessGuard> = Lazy::new(|| ServerProcessGuard);
-
-fn extract_dictionary() {
-    let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
-    let zip_path = self_exe_path
-        .parent()
-        .unwrap()
-        .join("AzooKeyDictionary.zip");
-    let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false).unwrap();
-    let extract_path = app_dirs.config_dir.join("AzooKeyDictionary");
-    if !extract_path.exists() {
-        std::fs::create_dir_all(&extract_path).unwrap();
-        let mut zip = zip::ZipArchive::new(std::fs::File::open(zip_path).unwrap()).unwrap();
-        zip.extract(&extract_path).unwrap();
-    }
-}
-
-pub static SELF_EXE_PATH: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new(String::default()));
-
 #[tokio::main]
 async fn main() {
-    let args = std::env::args().collect::<Vec<_>>();
-
-    SELF_EXE_PATH.write().unwrap().push_str(&args[0]);
-
-    /*if args.contains(&"server".to_string()) {
-        let server = AzookeyConversionServer::new();
-        let server_name = &server.server_name;
-        println!("${}$", server_name);
-        server.server_loop();
-        return;
-    }
-
-    let server_name = start_server_process();
-    SERVER_NAME.lock().unwrap().replace(server_name);
-
-    Lazy::force(&_SERVER_GUARD);*/
-
-    extract_dictionary();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -295,24 +204,13 @@ async fn main() {
 
                 let conversion_handler = ConversionHandler::new(app_handle).unwrap();
 
-                let mut master = Master::new(conversion_handler);
+                let master = Master::new(conversion_handler);
 
                 master.unwrap().run().unwrap();
             });
 
             Ok(())
         })
-        .on_window_event(|_window, event| match event {
-            tauri::WindowEvent::CloseRequested { .. } => {
-                cleanup_server_process();
-            }
-            tauri::WindowEvent::Destroyed => {
-                cleanup_server_process();
-            }
-            _ => {}
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-
-    cleanup_server_process();
 }

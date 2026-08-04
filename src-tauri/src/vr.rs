@@ -3,15 +3,13 @@ use std::{fs, path::PathBuf, process::Command};
 use serde_json::json;
 use tracing::{debug, error, info, warn};
 
-use crate::SELF_EXE_PATH;
-
 const APP_KEY: &str = "dev.mii.vrclipboardime";
 
 #[cfg(target_os = "windows")]
 pub fn create_vrmanifest() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting VR manifest file creation");
 
-    let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
+    let self_exe_path = std::env::current_exe()?;
     debug!("Executable path: {}", self_exe_path.display());
 
     let manifest = json!({
@@ -65,7 +63,7 @@ pub fn create_vrmanifest() -> Result<(), Box<dyn std::error::Error>> {
 pub fn register_manifest_with_openvr() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting OpenVR manifest registration using proper method");
 
-    let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
+    let self_exe_path = std::env::current_exe()?;
     let exe_dir = self_exe_path
         .parent()
         .ok_or("Failed to get executable directory")?;

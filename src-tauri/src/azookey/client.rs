@@ -1,159 +1,161 @@
-use std::{collections::HashMap, path::PathBuf, sync::LazyLock};
+use std::{collections::HashSet, time::Duration};
 
-use azookey_binding::{Candidate, ComposingText, KanaKanjiConverter};
-use ipc_channel::ipc::{IpcReceiver, IpcSender};
-
-use itertools::Itertools;
+use anyhow::{Context, Result};
+use azookey_kkc::{
+    Backend, Candidate, ConvertRequest, Converter, ConverterBuilder, InputStyle, LearningMode,
+};
 use platform_dirs::AppDirs;
-use tracing::info;
+use tauri::{AppHandle, Manager};
+use tracing::{debug, info};
 
-use crate::SELF_EXE_PATH;
-
-use super::IpcMessage;
-
-static SIGNMAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
-    HashMap::from([
-        ("-", "ー"),
-        ("=", "＝"),
-        ("[", "「"),
-        ("]", "」"),
-        (";", "；"),
-        ("@", "＠"),
-        (",", "、"),
-        (".", "。"),
-        ("/", "・"),
-        ("!", "！"),
-        ("#", "＃"),
-        ("$", "＄"),
-        ("%", "％"),
-        ("^", "＾"),
-        ("&", "＆"),
-        ("*", "＊"),
-        ("(", "（"),
-        (")", "）"),
-        ("_", "＿"),
-        ("+", "＋"),
-        ("{", "｛"),
-        ("}", "｝"),
-        ("|", "｜"),
-        (":", "："),
-        ("\"", "”"),
-        ("<", "＜"),
-        (">", "＞"),
-        ("?", "？"),
-        ("\\", "￥"),
-    ])
-});
+use crate::config::AzookeyBackend;
 
 pub struct AzookeyConversionClient {
-    pub azookey_converter: KanaKanjiConverter,
-    pub composing_text: ComposingText,
-    pub extract_path: String,
-    pub weight_path: String,
+    converter: Converter,
+    composing_text: String,
 }
 
 impl AzookeyConversionClient {
-    pub fn new() -> Self {
-        println!("Creating new AzookeyConversionClient instance");
+    pub fn new(app_handle: &AppHandle, backend: AzookeyBackend) -> Result<Self> {
+        let resource_dir = app_handle
+            .path()
+            .resource_dir()
+            .context("failed to resolve Tauri resource directory")?;
+        let native_dir = resource_dir.join("azookey-native");
+        let model_path = resource_dir.join("ggml-model-Q5_K_M.gguf");
 
-        let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false).unwrap();
-        let path = app_dirs
-            .config_dir
-            .join("AzooKeyDictionary/AzooKeyDictionary/Dictionary");
-        let extract_path = path.to_str().unwrap();
+        let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false)
+            .context("failed to resolve application data directories")?;
+        let data_dir = app_dirs.config_dir.join("AzooKey");
+        let backend = match backend {
+            AzookeyBackend::Cpu => Backend::Cpu,
+            AzookeyBackend::Vulkan => Backend::Vulkan,
+        };
 
-        println!("Extract path: {}", extract_path);
+        info!(
+            ?backend,
+            native_dir = %native_dir.display(),
+            model_path = %model_path.display(),
+            "initializing AzooKey converter"
+        );
+        let converter = ConverterBuilder::new(backend, model_path)
+            .native_dir(native_dir)
+            .memory_directory(data_dir.join("memory"))
+            .shared_container(data_dir.join("shared"))
+            .learning_mode(LearningMode::Disabled)
+            .preload_dictionary(true)
+            .n_best(10)
+            .inference_limit(10)
+            .timeout(Duration::from_secs(300))
+            .build()
+            .context("failed to initialize azookey-kkc")?;
 
-        let self_exe_path = PathBuf::from(SELF_EXE_PATH.read().unwrap().as_str());
-        let weight_path = self_exe_path
-            .parent()
-            .unwrap()
-            .join("ggml-model-Q5_K_M.gguf")
-            .to_string_lossy()
-            .to_string();
-
-        Self {
-            azookey_converter: KanaKanjiConverter::new(),
-            composing_text: ComposingText::new(),
-            extract_path: extract_path.to_string(),
-            weight_path,
-        }
+        Ok(Self {
+            converter,
+            composing_text: String::new(),
+        })
     }
 
-    fn pre_process_text(text: &str) -> String {
-        let mut result = String::new();
-
-        // replace all characters in the text with their corresponding replacements
-        for c in text.chars() {
-            if let Some(&replacement) = SIGNMAP.get(c.to_string().as_str()) {
-                result.push_str(replacement);
-            } else {
-                result.push(c);
-            }
-        }
-
-        // push 'n' if the last and second last characters are 'n'
-        if result.ends_with('n') {
-            let mut chars = result.chars().collect::<Vec<_>>();
-            if chars.len() > 1 && chars[chars.len() - 2] != 'n' {
-                chars.push('n');
-            }
-            result = chars.into_iter().collect::<String>();
-        }
-
-        // push '§' at the end of the string to avoid unnecessary prediction
-        result.push_str("§");
-
-        result
-    }
-
-    fn post_process_text(text: &str) -> String {
-        let mut result = text.to_string();
-
-        if result.ends_with('§') {
-            result.pop();
-        }
-
-        result
-    }
-
-    fn post_process_candidates(candidates: Vec<Candidate>) -> Vec<Candidate> {
-        candidates
-            .iter()
-            .take(8)
-            .map(|c| {
-                let mut candidate = c.clone();
-                candidate.text = Self::post_process_text(&candidate.text);
-                candidate
-            })
-            .unique_by(|c| c.text.clone())
-            .collect()
+    pub fn backend(&self) -> Backend {
+        self.converter.backend()
     }
 
     pub fn reset_composing_text(&mut self) {
-        info!("Resetting composing text");
-
-        self.composing_text = ComposingText::new();
+        self.composing_text.clear();
     }
 
     pub fn insert_at_cursor_position(&mut self, text: &str) {
-        info!("Inserting at cursor position: {}", text);
-
-        let text = Self::pre_process_text(text);
-        self.composing_text.insert_at_cursor_position(&text);
+        self.composing_text.push_str(&pre_process_text(text));
     }
 
-    pub fn request_candidates(&mut self, context: &str) -> Vec<Candidate> {
-        info!("Requesting candidates for context: {}", context);
-        info!("Dictionary extract path: {}", self.extract_path);
-        info!("Model weight path: {}", self.weight_path);
-        let candidates = self.azookey_converter.request_candidates(
-            &self.composing_text,
-            context,
-            &self.extract_path,
-            &self.weight_path,
-        );
-        println!("{:?}", candidates);
-        Self::post_process_candidates(candidates)
+    pub fn request_candidates(&self, context: &str) -> Result<Vec<Candidate>> {
+        debug!(context, text = %self.composing_text, "requesting AzooKey candidates");
+        let mut request =
+            ConvertRequest::new(&self.composing_text).input_style(InputStyle::Roman2Kana);
+        if !context.is_empty() {
+            request.options.left_side_context = Some(context.to_owned());
+        }
+        let result = self
+            .converter
+            .convert(request)
+            .context("AzooKey conversion failed")?;
+        Ok(post_process_candidates(result.main_results))
+    }
+}
+
+fn pre_process_text(text: &str) -> String {
+    let mut result = String::with_capacity(text.len() + 1);
+    for character in text.chars() {
+        result.push_str(match character {
+            '-' => "ー",
+            '=' => "＝",
+            '[' => "「",
+            ']' => "」",
+            ';' => "；",
+            '@' => "＠",
+            ',' => "、",
+            '.' => "。",
+            '/' => "・",
+            '!' => "！",
+            '#' => "＃",
+            '$' => "＄",
+            '%' => "％",
+            '^' => "＾",
+            '&' => "＆",
+            '*' => "＊",
+            '(' => "（",
+            ')' => "）",
+            '_' => "＿",
+            '+' => "＋",
+            '{' => "｛",
+            '}' => "｝",
+            '|' => "｜",
+            ':' => "：",
+            '"' => "”",
+            '<' => "＜",
+            '>' => "＞",
+            '?' => "？",
+            '\\' => "￥",
+            _ => {
+                result.push(character);
+                continue;
+            }
+        });
+    }
+
+    if result.ends_with('n') {
+        let mut characters = result.chars().rev();
+        characters.next();
+        if characters.next().is_some_and(|previous| previous != 'n') {
+            result.push('n');
+        }
+    }
+    result.push('§');
+    result
+}
+
+fn post_process_candidates(candidates: Vec<Candidate>) -> Vec<Candidate> {
+    let mut seen = HashSet::new();
+    candidates
+        .into_iter()
+        .take(8)
+        .filter_map(|mut candidate| {
+            if candidate.text.ends_with('§') {
+                candidate.text.pop();
+            }
+            seen.insert(candidate.text.clone()).then_some(candidate)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pre_process_text;
+
+    #[test]
+    fn preprocessing_preserves_roman_input_and_normalizes_symbols() {
+        assert_eq!(pre_process_text("konnichiha?"), "konnichiha？§");
+        assert_eq!(pre_process_text("kan"), "kann§");
+        assert_eq!(pre_process_text("kann"), "kann§");
     }
 }

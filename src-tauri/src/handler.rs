@@ -7,7 +7,7 @@ use crate::tsf_conversion::TsfConversion;
 use crate::{
     config::{Config, OnCopyMode},
     conversion::Conversion,
-    Log, SERVER_NAME, STATE,
+    Log, STATE,
 };
 use anyhow::Result;
 use chrono::Local;
@@ -90,11 +90,19 @@ impl ConversionHandler {
             return Ok(());
         }
 
-        if self.azookey_conversion.is_none() {
-            let client = AzookeyConversionClient::new();
+        let requested_backend = match config.azookey_backend {
+            crate::config::AzookeyBackend::Cpu => azookey_kkc::Backend::Cpu,
+            crate::config::AzookeyBackend::Vulkan => azookey_kkc::Backend::Vulkan,
+        };
+        let needs_initialization = match self.azookey_conversion.as_ref() {
+            Some(conversion) => conversion.backend() != requested_backend,
+            None => true,
+        };
+        if needs_initialization {
+            let client = AzookeyConversionClient::new(&self.app_handle, config.azookey_backend)?;
             let conversion = AzookeyConversion::new(client);
             self.azookey_conversion = Some(conversion);
-            info!("Azookey conversion created");
+            info!(?requested_backend, "Azookey conversion created");
         }
 
         let azookey_conversion = self.azookey_conversion.as_mut().unwrap();

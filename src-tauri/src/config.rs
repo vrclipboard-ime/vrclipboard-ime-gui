@@ -13,6 +13,14 @@ use tracing::{debug, error, info, trace};
 
 use crate::AppState;
 
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum AzookeyBackend {
+    #[default]
+    Cpu,
+    Vulkan,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default = "semicolon")]
@@ -35,6 +43,8 @@ pub struct Config {
     pub tsf_announce: bool,
     #[serde(default = "bool_false")]
     pub use_azookey_conversion: bool,
+    #[serde(default)]
+    pub azookey_backend: AzookeyBackend,
     #[serde(default = "bool_false")]
     pub azookey_announce: bool,
 }
@@ -52,6 +62,7 @@ impl Default for Config {
             skip_on_out_of_vrc: true,
             tsf_announce: false,
             use_azookey_conversion: false,
+            azookey_backend: AzookeyBackend::default(),
             azookey_announce: false,
         }
     }

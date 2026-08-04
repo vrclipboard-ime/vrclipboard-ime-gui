@@ -11,9 +11,12 @@ export interface Config {
   skip_url: boolean;
   use_tsf_reconvert: boolean;
   use_azookey_conversion: boolean;
+  azookey_backend: AzookeyBackend;
   skip_on_out_of_vrc: boolean;
   tsf_announce?: boolean;
 }
+
+export type AzookeyBackend = 'cpu' | 'vulkan';
 
 export enum OnCopyMode {
   ReturnToClipboard = 'ReturnToClipboard',
@@ -106,6 +109,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     skip_url: true,
     use_tsf_reconvert: false,
     use_azookey_conversion: false,
+    azookey_backend: 'cpu',
     skip_on_out_of_vrc: true,
   });
   const [isOpen, setIsOpen] = useState(false);
@@ -211,6 +215,15 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
       setSettings(newSettings);
       saveSettings(newSettings);
     }
+  };
+
+  const handleAzookeyBackendChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSettings = {
+      ...settings,
+      azookey_backend: e.target.value as AzookeyBackend
+    };
+    setSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   const handleSelectChange = (value: OnCopyMode) => {
@@ -399,7 +412,22 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 ml-5 transition-colors">
                   azooKey変換機能を使用します。有効にすると区切り、モード変更、開始文字が無効化されます。<br />
-                  CPU負荷は高くなりますが、変換精度が向上します。
+                  Zenzaiを使用して変換精度を向上させます。
+                </p>
+                <label className="block mt-2 ml-5 text-xs text-gray-600 dark:text-gray-300">
+                  実行バックエンド
+                  <select
+                    value={settings.azookey_backend}
+                    onChange={handleAzookeyBackendChange}
+                    disabled={!settings.use_azookey_conversion}
+                    className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <option value="cpu">CPU（安定性優先）</option>
+                    <option value="vulkan">Vulkan</option>
+                  </select>
+                </label>
+                <p className="mt-1 ml-5 text-xs text-gray-500 dark:text-gray-400">
+                  Vulkanの初期化に失敗した場合はエラーになり、CPUへ自動切替しません。
                 </p>
               </div>
 

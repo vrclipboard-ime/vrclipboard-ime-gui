@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use azookey_kkc::Backend;
 use tracing::{debug, info, trace};
 
 use super::client::AzookeyConversionClient;
@@ -60,6 +61,10 @@ impl AzookeyConversion {
             common_prefix: None,
             client,
         }
+    }
+
+    pub fn backend(&self) -> Backend {
+        self.client.backend()
     }
 
     /// Converts text - Main entry point for conversion processing
@@ -172,7 +177,8 @@ impl AzookeyConversion {
         self.client.insert_at_cursor_position(&diff_text);
 
         // Get and select conversion candidate
-        let converted = match self.client.request_candidates("").first() {
+        let candidates = self.client.request_candidates("")?;
+        let converted = match candidates.first() {
             Some(candidate) => candidate.text.clone(),
             None => return Err(anyhow!("No conversion candidates available")),
         };
@@ -198,7 +204,7 @@ impl AzookeyConversion {
         self.is_reconversion_mode = true;
 
         // Prepare for reconversion if needed
-        self.prepare_reconversion_if_needed();
+        self.prepare_reconversion_if_needed()?;
 
         // Select and switch candidates
         let result = self.select_next_candidate()?;
@@ -211,7 +217,7 @@ impl AzookeyConversion {
     }
 
     /// Prepares difference processing for reconversion
-    fn prepare_reconversion_if_needed(&mut self) {
+    fn prepare_reconversion_if_needed(&mut self) -> Result<()> {
         // Only execute on first reconversion
         if self.common_prefix.is_none() {
             debug!("Preparing for reconversion");
@@ -245,8 +251,9 @@ impl AzookeyConversion {
             trace!("Set reconversion prefix: {}", prefix);
 
             // Generate candidates
-            self.generate_candidates(&diff_text, &prefix);
+            self.generate_candidates(&diff_text, &prefix)?;
         }
+        Ok(())
     }
 
     /// Generates conversion candidates
@@ -254,7 +261,7 @@ impl AzookeyConversion {
     /// # Arguments
     /// * `diff_text` - Difference text to convert
     /// * `prefix` - Common prefix
-    fn generate_candidates(&mut self, diff_text: &str, prefix: &str) {
+    fn generate_candidates(&mut self, diff_text: &str, prefix: &str) -> Result<()> {
         debug!("Generating candidates");
 
         self.client.reset_composing_text();
@@ -263,14 +270,14 @@ impl AzookeyConversion {
         // Get candidates from client
         let mut candidates = self
             .client
-            .request_candidates(prefix)
-            .iter()
-            .map(|c| c.text.clone())
+            .request_candidates(prefix)?
+            .into_iter()
+            .map(|candidate| candidate.text)
             .collect::<Vec<String>>();
         trace!("Retrieved candidates: {:?}", candidates);
 
         // Include raw text in candidates
-        candidates.insert(1, diff_text.to_string());
+        candidates.insert(usize::from(!candidates.is_empty()), diff_text.to_string());
 
         // Limit number of candidates (for safety)
         if candidates.len() > MAX_CANDIDATES {
@@ -280,6 +287,7 @@ impl AzookeyConversion {
         trace!("Final candidate list: {:?}", candidates);
         self.reconversion_candidates = Some(candidates);
         self.candidate_index = Some(0);
+        Ok(())
     }
 
     /// Selects the next candidate

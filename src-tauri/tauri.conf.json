@@ -7,7 +7,8 @@
   },
   "bundle": {
     "resources": {
-      "resources/*": ""
+      "resources/azookey-native": "azookey-native",
+      "resources/ggml-model-Q5_K_M.gguf": "ggml-model-Q5_K_M.gguf"
     },
     "active": true,
     "targets": "all",
