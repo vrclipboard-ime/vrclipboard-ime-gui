@@ -204,6 +204,15 @@ async fn main() {
 
                 let conversion_handler = ConversionHandler::new(app_handle).unwrap();
 
+                #[cfg(feature = "azookey")]
+                let conversion_handler = {
+                    let mut conversion_handler = conversion_handler;
+                    if let Err(error) = conversion_handler.warm_up_azookey() {
+                        error!(%error, "Azookey conversion warm-up failed");
+                    }
+                    conversion_handler
+                };
+
                 let master = Master::new(conversion_handler);
 
                 master.unwrap().run().unwrap();

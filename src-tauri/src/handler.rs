@@ -58,6 +58,43 @@ impl ConversionHandler {
     pub fn get_config(&self) -> Config {
         STATE.lock().unwrap().clone()
     }
+
+    #[cfg(feature = "azookey")]
+    pub fn warm_up_azookey(&mut self) -> Result<()> {
+        let config = self.get_config();
+        if !config.use_azookey_conversion {
+            return Ok(());
+        }
+
+        info!(backend = ?config.azookey_backend, "Warming up Azookey conversion");
+        self.ensure_azookey_conversion(config.azookey_backend)?
+            .warm_up()?;
+        info!(backend = ?config.azookey_backend, "Azookey conversion warm-up completed");
+        Ok(())
+    }
+
+    #[cfg(feature = "azookey")]
+    fn ensure_azookey_conversion(
+        &mut self,
+        backend: crate::config::AzookeyBackend,
+    ) -> Result<&mut AzookeyConversion> {
+        let requested_backend = match backend {
+            crate::config::AzookeyBackend::Cpu => azookey_kkc::Backend::Cpu,
+            crate::config::AzookeyBackend::Vulkan => azookey_kkc::Backend::Vulkan,
+        };
+        let needs_initialization = match self.azookey_conversion.as_ref() {
+            Some(conversion) => conversion.backend() != requested_backend,
+            None => true,
+        };
+        if needs_initialization {
+            let client = AzookeyConversionClient::new(&self.app_handle, backend)?;
+            self.azookey_conversion = Some(AzookeyConversion::new(client));
+            info!(?requested_backend, "Azookey conversion created");
+        }
+        self.azookey_conversion
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("Azookey conversion was not initialized"))
+    }
 }
 
 impl ConversionHandler {
@@ -90,24 +127,9 @@ impl ConversionHandler {
             return Ok(());
         }
 
-        let requested_backend = match config.azookey_backend {
-            crate::config::AzookeyBackend::Cpu => azookey_kkc::Backend::Cpu,
-            crate::config::AzookeyBackend::Vulkan => azookey_kkc::Backend::Vulkan,
-        };
-        let needs_initialization = match self.azookey_conversion.as_ref() {
-            Some(conversion) => conversion.backend() != requested_backend,
-            None => true,
-        };
-        if needs_initialization {
-            let client = AzookeyConversionClient::new(&self.app_handle, config.azookey_backend)?;
-            let conversion = AzookeyConversion::new(client);
-            self.azookey_conversion = Some(conversion);
-            info!(?requested_backend, "Azookey conversion created");
-        }
-
-        let azookey_conversion = self.azookey_conversion.as_mut().unwrap();
-
-        let converted = azookey_conversion.convert(contents)?;
+        let converted = self
+            .ensure_azookey_conversion(config.azookey_backend)?
+            .convert(contents)?;
 
         info!("Azookey conversion: {} -> {}", contents, converted);
 

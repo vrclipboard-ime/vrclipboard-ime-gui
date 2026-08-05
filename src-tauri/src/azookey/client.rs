@@ -60,6 +60,13 @@ impl AzookeyConversionClient {
         self.converter.backend()
     }
 
+    pub fn warm_up(&self) -> Result<()> {
+        self.converter
+            .convert(ConvertRequest::new("kana").input_style(InputStyle::Roman2Kana))
+            .context("AzooKey warm-up conversion failed")?;
+        Ok(())
+    }
+
     pub fn reset_composing_text(&mut self) {
         self.composing_text.clear();
     }

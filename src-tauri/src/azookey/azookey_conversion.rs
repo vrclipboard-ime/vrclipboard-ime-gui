@@ -67,6 +67,10 @@ impl AzookeyConversion {
         self.client.backend()
     }
 
+    pub fn warm_up(&self) -> Result<()> {
+        self.client.warm_up()
+    }
+
     /// Converts text - Main entry point for conversion processing
     ///
     /// # Arguments
