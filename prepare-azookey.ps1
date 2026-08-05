@@ -37,5 +37,10 @@ if (Test-Path -LiteralPath $destination) {
 }
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 Copy-Item -Path (Join-Path $source '*') -Destination $destination -Recurse -Force
+Get-ChildItem -LiteralPath $destination -Recurse -Force | ForEach-Object {
+    if ($_.Attributes -band [System.IO.FileAttributes]::ReadOnly) {
+        $_.Attributes = $_.Attributes -band (-bnot [System.IO.FileAttributes]::ReadOnly)
+    }
+}
 
 Write-Host "Staged azookey-kkc native resources: $destination"

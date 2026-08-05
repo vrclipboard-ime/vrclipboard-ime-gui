@@ -29,7 +29,7 @@ regex = "1"
 tracing = "0.1"
 tracing-appender = "0.2"
 tauri-plugin-shell = "2.0.0-rc"
-azookey-kkc = { git = "https://github.com/vrclipboard-ime/azookey-kkc-rs.git", rev = "72c0a08cdcf97097dec270a54fbf7dbd81a35d3f", optional = true }
+azookey-kkc = { git = "https://github.com/vrclipboard-ime/azookey-kkc-rs.git", rev = "0f0ab2e19241764eb041a7db217e715876306917", optional = true }
 tokio = { version = "1.44.2", features = ["full"] }
 
 [dependencies.tracing-subscriber]

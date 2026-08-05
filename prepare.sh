@@ -16,5 +16,6 @@ esac
 rm -rf -- "$destination"
 mkdir -p -- "$destination"
 cp -R -- "$source_dir"/. "$destination"/
+chmod -R u+w "$destination"
 
 npm install
