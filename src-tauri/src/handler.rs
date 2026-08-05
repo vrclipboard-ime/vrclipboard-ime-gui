@@ -62,7 +62,9 @@ impl ConversionHandler {
     #[cfg(feature = "azookey")]
     pub fn warm_up_azookey(&mut self) -> Result<()> {
         let config = self.get_config();
-        if !config.use_azookey_conversion {
+        if !config.use_azookey_conversion
+            || config.azookey_backend != crate::config::AzookeyBackend::Vulkan
+        {
             return Ok(());
         }
 

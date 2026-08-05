@@ -112,7 +112,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 [[package]]
 name = "azookey-kkc"
 version = "0.1.0"
-source = "git+https://github.com/vrclipboard-ime/azookey-kkc-rs.git?rev=0f0ab2e19241764eb041a7db217e715876306917#0f0ab2e19241764eb041a7db217e715876306917"
+source = "git+https://github.com/vrclipboard-ime/azookey-kkc-rs.git?rev=4bc6cfd45ab628e31e996ff156246a52e3caa9f6#4bc6cfd45ab628e31e996ff156246a52e3caa9f6"
 dependencies = [
  "libloading 0.8.9",
  "serde",
