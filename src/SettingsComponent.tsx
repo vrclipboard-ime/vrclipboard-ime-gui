@@ -422,13 +422,10 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                     disabled={!settings.use_azookey_conversion}
                     className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                   >
-                    <option value="cpu">CPU（安定性優先）</option>
+                    <option value="cpu">CPU</option>
                     <option value="vulkan">Vulkan</option>
                   </select>
                 </label>
-                <p className="mt-1 ml-5 text-xs text-gray-500 dark:text-gray-400">
-                  Vulkanの初期化に失敗した場合はエラーになり、CPUへ自動切替しません。
-                </p>
               </div>
 
               <div className="mt-3">
