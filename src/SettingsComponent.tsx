@@ -423,7 +423,7 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                     className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                   >
                     <option value="cpu">CPU</option>
-                    <option value="vulkan">Vulkan</option>
+                    <option value="vulkan">GPU</option>
                   </select>
                 </label>
               </div>
