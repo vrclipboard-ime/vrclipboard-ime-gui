@@ -28,7 +28,7 @@
   },
   "productName": "vrclipboard-ime-gui",
   "mainBinaryName": "vrclipboard-ime-gui",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "identifier": "dev.mii.vrclipboard-ime",
   "plugins": {
     "updater": {
