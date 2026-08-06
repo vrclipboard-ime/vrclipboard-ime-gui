@@ -16,7 +16,7 @@ pub struct AzookeyConversionClient {
 }
 
 impl AzookeyConversionClient {
-    pub fn new(app_handle: &AppHandle, backend: AzookeyBackend) -> Result<Self> {
+    pub fn new(app_handle: &AppHandle, _backend: AzookeyBackend) -> Result<Self> {
         let resource_dir = app_handle
             .path()
             .resource_dir()
@@ -27,10 +27,7 @@ impl AzookeyConversionClient {
         let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false)
             .context("failed to resolve application data directories")?;
         let data_dir = app_dirs.config_dir.join("AzooKey");
-        let backend = match backend {
-            AzookeyBackend::Cpu => Backend::Cpu,
-            AzookeyBackend::Vulkan => Backend::Vulkan,
-        };
+        let backend = Backend::Cpu;
 
         info!(
             ?backend,

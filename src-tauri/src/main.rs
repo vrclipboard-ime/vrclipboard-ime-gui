@@ -63,7 +63,8 @@ fn load_settings(state: State<AppState>) -> Result<Config, String> {
 }
 
 #[tauri::command]
-fn save_settings(config: Config, state: State<AppState>) -> Result<(), String> {
+fn save_settings(mut config: Config, state: State<AppState>) -> Result<(), String> {
+    config.force_cpu_backend();
     *STATE.lock().unwrap() = config.clone();
     config.save(state)
 }

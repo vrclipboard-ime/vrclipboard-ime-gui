@@ -16,7 +16,7 @@ export interface Config {
   tsf_announce?: boolean;
 }
 
-export type AzookeyBackend = 'cpu' | 'vulkan';
+export type AzookeyBackend = 'cpu';
 
 export enum OnCopyMode {
   ReturnToClipboard = 'ReturnToClipboard',
@@ -217,15 +217,6 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
     }
   };
 
-  const handleAzookeyBackendChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSettings = {
-      ...settings,
-      azookey_backend: e.target.value as AzookeyBackend
-    };
-    setSettings(newSettings);
-    saveSettings(newSettings);
-  };
-
   const handleSelectChange = (value: OnCopyMode) => {
     const newSettings = { ...settings, on_copy_mode: value };
     setSettings(newSettings);
@@ -414,18 +405,6 @@ const SettingsComponent: React.FC<SettingsComponentProps> = ({
                   azooKey変換機能を使用します。有効にすると区切り、モード変更、開始文字が無効化されます。<br />
                   Zenzaiを使用して変換精度を向上させます。
                 </p>
-                <label className="block mt-2 ml-5 text-xs text-gray-600 dark:text-gray-300">
-                  実行バックエンド
-                  <select
-                    value={settings.azookey_backend}
-                    onChange={handleAzookeyBackendChange}
-                    disabled={!settings.use_azookey_conversion}
-                    className="ml-2 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                  >
-                    <option value="cpu">CPU</option>
-                    <option value="vulkan">GPU</option>
-                  </select>
-                </label>
               </div>
 
               <div className="mt-3">

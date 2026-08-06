@@ -122,6 +122,7 @@ impl Config {
             config.use_azookey_conversion = true;
             config.azookey_announce = true;
         }
+        config.force_cpu_backend();
         debug!("Config loaded successfully");
         Ok(config)
     }
@@ -129,6 +130,9 @@ impl Config {
     pub fn save(&self, state: State<AppState>) -> Result<(), String> {
         debug!("Saving config");
         std::fs::create_dir_all(Self::get_path()).unwrap();
+
+        let mut config = self.clone();
+        config.force_cpu_backend();
 
         let config_path = Self::get_path().join("config.yaml");
         let mut file = match File::create(&config_path) {
@@ -139,7 +143,7 @@ impl Config {
             }
         };
 
-        match serde_yaml::to_string(&self) {
+        match serde_yaml::to_string(&config) {
             Ok(yaml) => {
                 trace!("Config to be saved: {}", yaml);
                 if let Err(e) = file.write_all(yaml.as_bytes()) {
@@ -147,7 +151,7 @@ impl Config {
                     return Err(format!("Failed to write config: {}", e));
                 }
                 let mut app_config = state.config.lock().unwrap();
-                *app_config = self.clone();
+                *app_config = config;
                 info!("Config saved successfully");
                 Ok(())
             }
@@ -175,5 +179,26 @@ impl Config {
         let app_data = app_dirs.config_dir;
         trace!("Config path: {:?}", app_data);
         app_data
+    }
+
+    pub(crate) fn force_cpu_backend(&mut self) {
+        self.azookey_backend = AzookeyBackend::Cpu;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AzookeyBackend, Config};
+
+    #[test]
+    fn cpu_only_release_normalizes_existing_vulkan_setting() {
+        let mut config = Config {
+            azookey_backend: AzookeyBackend::Vulkan,
+            ..Config::default()
+        };
+
+        config.force_cpu_backend();
+
+        assert_eq!(config.azookey_backend, AzookeyBackend::Cpu);
     }
 }
