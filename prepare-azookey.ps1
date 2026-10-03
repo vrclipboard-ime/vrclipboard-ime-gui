@@ -43,4 +43,10 @@ Get-ChildItem -LiteralPath $destination -Recurse -Force | ForEach-Object {
     }
 }
 
+# Upstream uses the Windows ANSI code page for UTF-8 backend paths. Always
+# replace the registry DLL with the patched build, including with -SkipBuild.
+& (Join-Path $repoRoot 'build-portable-ggml.ps1') `
+    -LlamaSourceRoot (Join-Path $azookeyRootPath 'vendor/llama.cpp') `
+    -DestinationDirectory $destination -Configuration $Configuration
+
 Write-Host "Staged azookey-kkc native resources: $destination"

@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [string]$OutputDirectory = 'dist-gpui'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,7 +24,12 @@ finally {
     Pop-Location
 }
 
-$output = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'dist-gpui'))
+$outputPath = if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
+    $OutputDirectory
+} else {
+    Join-Path $repoRoot $OutputDirectory
+}
+$output = [System.IO.Path]::GetFullPath($outputPath)
 $outputPrefix = $repoRoot.TrimEnd(
     [System.IO.Path]::DirectorySeparatorChar,
     [System.IO.Path]::AltDirectorySeparatorChar
@@ -42,5 +48,10 @@ $resources = Join-Path $repoRoot 'src-tauri\resources'
 Copy-Item -LiteralPath $binary -Destination $output
 Copy-Item -LiteralPath (Join-Path $resources 'ggml-model-Q5_K_M.gguf') -Destination $output
 Copy-Item -LiteralPath (Join-Path $resources 'azookey-native') -Destination $output -Recurse
+# SwiftPM Bundle.module uses Bundle.main (the EXE directory), even when the
+# bridge DLL lives in a subdirectory. Keep every resource bundle beside the EXE.
+Get-ChildItem -LiteralPath (Join-Path $resources 'azookey-native') -Directory -Filter '*.resources' |
+    Copy-Item -Destination $output -Recurse
+Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $output
 
 Write-Host "GPUI package created: $output"

@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::Path, time::Duration};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use azookey_kkc::{
     Backend, Candidate, ConvertRequest, Converter, ConverterBuilder, InputStyle, LearningMode,
 };
@@ -16,18 +16,50 @@ pub struct AzookeyConversionClient {
 
 impl AzookeyConversionClient {
     pub fn new(resource_dir: &Path, _backend: AzookeyBackend) -> Result<Self> {
-        let native_dir = resource_dir.join("azookey-native");
-        let model_path = resource_dir.join("ggml-model-Q5_K_M.gguf");
-
         let app_dirs = AppDirs::new(Some("vrclipboard-ime"), false)
             .context("failed to resolve application data directories")?;
         let data_dir = app_dirs.config_dir.join("AzooKey");
+        Self::new_with_data_dir(resource_dir, &data_dir)
+    }
+
+    pub(crate) fn new_with_data_dir(resource_dir: &Path, data_dir: &Path) -> Result<Self> {
+        let resource_dir = resource_dir
+            .canonicalize()
+            .context("AzooKey resource directory is missing")?;
+        let native_dir = resource_dir.join("azookey-native");
+        let model_path = resource_dir.join("ggml-model-Q5_K_M.gguf");
+        let executable = std::env::current_exe().context("Cannot locate the executable")?;
+        let executable_dir = executable
+            .parent()
+            .context("Cannot locate the executable directory")?;
+        super::resources::prepare_resource_bundles(&native_dir, executable_dir)?;
+        for name in [
+            "azk_bridge.dll",
+            "llama.dll",
+            "ggml.dll",
+            "ggml-base.dll",
+            "ggml-cpu-generic.dll",
+            "swiftCore.dll",
+            "Foundation.dll",
+        ] {
+            ensure!(
+                native_dir.join(name).is_file(),
+                "AzooKey DLL missing: {}",
+                native_dir.join(name).display()
+            );
+        }
+        ensure!(
+            model_path.is_file(),
+            "AzooKey model missing: {}",
+            model_path.display()
+        );
         let backend = Backend::Cpu;
 
         info!(
             ?backend,
             native_dir = %native_dir.display(),
             model_path = %model_path.display(),
+            executable_dir = %executable_dir.display(),
             "initializing AzooKey converter"
         );
         let converter = ConverterBuilder::new(backend, model_path)

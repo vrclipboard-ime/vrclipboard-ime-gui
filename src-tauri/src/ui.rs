@@ -610,7 +610,7 @@ impl AppView {
         let conversion_locked = self.config.use_tsf_reconvert || self.config.use_azookey_conversion;
         let current_mode = match self.config.on_copy_mode {
             OnCopyMode::ReturnToClipboard => "クリップボードへ送信",
-            OnCopyMode::ReturnToChatbox => "チャットボックスへ送信",
+            OnCopyMode::ReturnToChatbox => "チャットボックスへ貼り付け",
             OnCopyMode::SendDirectly => "直接チャットへ送信",
         };
 

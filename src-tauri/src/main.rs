@@ -4,6 +4,8 @@
 mod assets;
 #[cfg(feature = "azookey")]
 mod azookey;
+#[cfg(target_os = "windows")]
+mod chatbox_input;
 mod com;
 mod config;
 mod conversion;
@@ -99,6 +101,28 @@ fn start_clipboard_monitor(sender: flume::Sender<AppEvent>) {
 }
 
 fn main() {
+    #[cfg(feature = "azookey")]
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|argument| argument == "--check-azookey")
+    {
+        // Native conversion diagnostics without UI, clipboard access or saved
+        // configuration changes. Optional paths also allow relocation tests.
+        let resources = std::env::args_os()
+            .nth(2)
+            .map(PathBuf::from)
+            .unwrap_or_else(resource_dir);
+        let data_dir = std::env::args_os()
+            .nth(3)
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join("vrclipboard-ime-azookey-check"));
+        if let Err(error) = azookey::check_conversion(&resources, &data_dir) {
+            eprintln!("AzooKey check failed: {error:#}");
+            std::process::exit(1);
+        }
+        return;
+    }
+
     let (event_sender, event_receiver) = flume::unbounded();
 
     let _ = tracing_subscriber::registry()
