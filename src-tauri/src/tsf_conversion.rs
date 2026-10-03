@@ -41,14 +41,24 @@ impl TsfConversion {
 
     fn reset_conversion_state(&mut self) {
         debug!("Resetting conversion state");
-        trace!("Before reset - now_reconvertion: {}, reconversion_prefix: {:?}, reconversion_index: {:?}, reconversion_candidates: {:?}",
-               self.now_reconvertion, self.reconversion_prefix, self.reconversion_index, self.reconversion_candidates);
+        trace!(
+            "Before reset - now_reconvertion: {}, reconversion_prefix: {:?}, reconversion_index: {:?}, reconversion_candidates: {:?}",
+            self.now_reconvertion,
+            self.reconversion_prefix,
+            self.reconversion_index,
+            self.reconversion_candidates
+        );
         self.now_reconvertion = false;
         self.reconversion_prefix = None;
         self.reconversion_index = None;
         self.reconversion_candidates = None;
-        trace!("After reset - now_reconvertion: {}, reconversion_prefix: {:?}, reconversion_index: {:?}, reconversion_candidates: {:?}",
-               self.now_reconvertion, self.reconversion_prefix, self.reconversion_index, self.reconversion_candidates);
+        trace!(
+            "After reset - now_reconvertion: {}, reconversion_prefix: {:?}, reconversion_index: {:?}, reconversion_candidates: {:?}",
+            self.now_reconvertion,
+            self.reconversion_prefix,
+            self.reconversion_index,
+            self.reconversion_candidates
+        );
     }
 
     fn convert_roman_to_kanji(&mut self, text: &str) -> Result<String> {

@@ -2,7 +2,7 @@ use anyhow::Result;
 use tracing::{debug, error, info};
 #[cfg(target_os = "windows")]
 use windows::Win32::{
-    System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
+    System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
     UI::TextServices::{CLSID_TF_ThreadMgr, ITfFunctionProvider, ITfThreadMgr2},
 };
 

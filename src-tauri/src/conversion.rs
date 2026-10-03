@@ -1,7 +1,7 @@
 use crate::{
-    config::Config,
-    converter::converter::{get_custom_converter, Converter},
     STATE,
+    config::Config,
+    converter::converter::{Converter, get_custom_converter},
 };
 use anyhow::Result;
 use tracing::{debug, info, trace, warn};
@@ -67,8 +67,7 @@ impl Conversion {
         let config = self.get_config();
         trace!(
             "Config command: {}, split: {}",
-            config.command,
-            config.split
+            config.command, config.split
         );
 
         if text.starts_with(&config.command) {
@@ -95,8 +94,7 @@ impl Conversion {
             for splitted in command_splitted.split(&config.split) {
                 trace!(
                     "Creating ConversionBlock - text: {}, converter: {}",
-                    splitted,
-                    current_converter
+                    splitted, current_converter
                 );
                 let converter = get_custom_converter(current_converter).unwrap_or_else(|| {
                     warn!(

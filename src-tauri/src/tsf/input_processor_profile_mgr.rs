@@ -2,9 +2,9 @@ use anyhow::Result;
 use tracing::{debug, error, info};
 #[cfg(target_os = "windows")]
 use windows::Win32::{
-    System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER},
+    System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
     UI::TextServices::{
-        CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr, GUID_TFCAT_TIP_KEYBOARD, HKL,
+        CLSID_TF_InputProcessorProfiles, GUID_TFCAT_TIP_KEYBOARD, HKL, ITfInputProcessorProfileMgr,
         TF_INPUTPROCESSORPROFILE, TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
         TF_PROFILETYPE_INPUTPROCESSOR,
     },

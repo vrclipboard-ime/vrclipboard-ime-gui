@@ -1,27 +1,29 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, path::PathBuf};
 
 #[cfg(feature = "azookey")]
 use crate::azookey::{azookey_conversion::AzookeyConversion, client::AzookeyConversionClient};
 #[cfg(target_os = "windows")]
 use crate::tsf_conversion::TsfConversion;
 use crate::{
+    STATE,
     config::{Config, OnCopyMode},
     conversion::Conversion,
-    Log, STATE,
+    events::{AppEvent, ConversionLog},
 };
 use anyhow::Result;
 use chrono::Local;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use clipboard_master::{CallbackResult, ClipboardHandler};
+use flume::Sender;
 use regex::Regex;
-use rosc::{encoder, OscMessage, OscPacket, OscType};
-use tauri::{AppHandle, Emitter};
+use rosc::{OscMessage, OscPacket, OscType, encoder};
 use tracing::{error, info, warn};
 #[cfg(target_os = "windows")]
 use windows::Win32::System::DataExchange::GetClipboardOwner;
 
 pub struct ConversionHandler {
-    app_handle: AppHandle,
+    event_sender: Sender<AppEvent>,
+    resource_dir: PathBuf,
     conversion: Conversion,
     #[cfg(target_os = "windows")]
     tsf_conversion: Option<TsfConversion>,
@@ -33,7 +35,7 @@ pub struct ConversionHandler {
 }
 
 impl ConversionHandler {
-    pub fn new(app_handle: AppHandle) -> Result<Self> {
+    pub fn new(event_sender: Sender<AppEvent>, resource_dir: PathBuf) -> Result<Self> {
         let conversion = Conversion::new();
         #[cfg(target_os = "windows")]
         let tsf_conversion = None;
@@ -43,7 +45,8 @@ impl ConversionHandler {
 
         info!("ConversionHandler created");
         Ok(Self {
-            app_handle,
+            event_sender,
+            resource_dir,
             conversion,
             #[cfg(target_os = "windows")]
             tsf_conversion,
@@ -89,7 +92,7 @@ impl ConversionHandler {
             None => true,
         };
         if needs_initialization {
-            let client = AzookeyConversionClient::new(&self.app_handle, backend)?;
+            let client = AzookeyConversionClient::new(&self.resource_dir, backend)?;
             self.azookey_conversion = Some(AzookeyConversion::new(client));
             info!(?requested_backend, "Azookey conversion created");
         }
@@ -227,20 +230,11 @@ impl ConversionHandler {
         }
 
         let datetime = Local::now();
-        if self
-            .app_handle
-            .emit(
-                "addLog",
-                Log {
-                    time: datetime.format("%Y %m/%d %H:%M:%S").to_string(),
-                    original: parsed_contents,
-                    converted,
-                },
-            )
-            .is_err()
-        {
-            error!("App handle add log failed");
-        }
+        let _ = self.event_sender.send(AppEvent::Conversion(ConversionLog {
+            time: datetime.format("%Y %m/%d %H:%M:%S").to_string(),
+            original: parsed_contents,
+            converted,
+        }));
     }
 }
 

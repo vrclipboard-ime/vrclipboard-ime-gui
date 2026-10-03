@@ -5,16 +5,10 @@ use std::{
 };
 
 use anyhow::Result;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tauri::State;
 use tracing::{debug, error, info, trace};
 
-use crate::{
-    config::Config,
-    converter::converter::{get_custom_converter, Converter},
-    AppState,
-};
+use crate::config::Config;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ConversionMethod {
@@ -85,7 +79,7 @@ impl Dictionary {
         Ok(dictionary)
     }
 
-    pub fn save(&self, state: State<AppState>) -> Result<(), String> {
+    pub fn save(&self) -> Result<(), String> {
         debug!("Saving dictionary");
         std::fs::create_dir_all(Config::get_path()).unwrap();
 
@@ -105,8 +99,6 @@ impl Dictionary {
                     error!("Failed to write dictionary: {}", e);
                     return Err(format!("Failed to write dictionary: {}", e));
                 }
-                let mut app_dictionary = state.dictionary.lock().unwrap();
-                *app_dictionary = self.clone();
                 info!("Dictionary saved successfully");
                 Ok(())
             }

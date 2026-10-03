@@ -8,10 +8,7 @@ use anyhow::Result;
 use platform_dirs::AppDirs;
 use serde::Serialize;
 use serde_derive::Deserialize;
-use tauri::State;
 use tracing::{debug, error, info, trace};
-
-use crate::AppState;
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -127,7 +124,7 @@ impl Config {
         Ok(config)
     }
 
-    pub fn save(&self, state: State<AppState>) -> Result<(), String> {
+    pub fn save(&self) -> Result<(), String> {
         debug!("Saving config");
         std::fs::create_dir_all(Self::get_path()).unwrap();
 
@@ -150,8 +147,6 @@ impl Config {
                     error!("Failed to write config: {}", e);
                     return Err(format!("Failed to write config: {}", e));
                 }
-                let mut app_config = state.config.lock().unwrap();
-                *app_config = config;
                 info!("Config saved successfully");
                 Ok(())
             }

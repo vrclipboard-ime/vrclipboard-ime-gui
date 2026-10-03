@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use azookey_kkc::Backend;
 use tracing::{debug, info, trace};
 
@@ -82,9 +82,7 @@ impl AzookeyConversion {
         debug!("Starting conversion: {}", text);
         trace!(
             "Current state: conversion_history={:?}, input_history={:?}, is_reconversion_mode={}",
-            self.conversion_history,
-            self.input_history,
-            self.is_reconversion_mode
+            self.conversion_history, self.input_history, self.is_reconversion_mode
         );
 
         self.current_text = text.to_string();
@@ -132,9 +130,7 @@ impl AzookeyConversion {
 
         trace!(
             "Before reset - is_reconversion_mode: {}, common_prefix: {:?}, candidate_index: {:?}",
-            self.is_reconversion_mode,
-            self.common_prefix,
-            self.candidate_index
+            self.is_reconversion_mode, self.common_prefix, self.candidate_index
         );
 
         self.is_reconversion_mode = false;
@@ -144,9 +140,7 @@ impl AzookeyConversion {
 
         trace!(
             "After reset - is_reconversion_mode: {}, common_prefix: {:?}, candidate_index: {:?}",
-            self.is_reconversion_mode,
-            self.common_prefix,
-            self.candidate_index
+            self.is_reconversion_mode, self.common_prefix, self.candidate_index
         );
     }
 
@@ -231,8 +225,7 @@ impl AzookeyConversion {
             let previous_input = self.get_previous_input(1);
             trace!(
                 "Previous output: {}, previous input: {}",
-                previous_output,
-                previous_input
+                previous_output, previous_input
             );
 
             // Detect difference position
@@ -417,18 +410,12 @@ impl AzookeyConversion {
             .unwrap_or_else(|| {
                 // If one is a prefix of the other
                 let min_len = s1.chars().count().min(s2.chars().count());
-                if s1.len() != s2.len() {
-                    min_len
-                } else {
-                    0
-                }
+                if s1.len() != s2.len() { min_len } else { 0 }
             });
 
         trace!(
             "String comparison: \"{}\" and \"{}\" differ at position: {}",
-            s1,
-            s2,
-            result
+            s1, s2, result
         );
         result
     }

@@ -2,8 +2,8 @@ use anyhow::Result;
 use tracing::{debug, error, info};
 #[cfg(target_os = "windows")]
 use windows::{
-    core::Interface,
     Win32::UI::TextServices::{ITfFnSearchCandidateProvider, ITfFunctionProvider},
+    core::Interface,
 };
 
 use super::search_candidate_provider::SearchCandidateProvider;

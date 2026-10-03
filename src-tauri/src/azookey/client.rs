@@ -1,11 +1,10 @@
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, path::Path, time::Duration};
 
 use anyhow::{Context, Result};
 use azookey_kkc::{
     Backend, Candidate, ConvertRequest, Converter, ConverterBuilder, InputStyle, LearningMode,
 };
 use platform_dirs::AppDirs;
-use tauri::{AppHandle, Manager};
 use tracing::{debug, info};
 
 use crate::config::AzookeyBackend;
@@ -16,11 +15,7 @@ pub struct AzookeyConversionClient {
 }
 
 impl AzookeyConversionClient {
-    pub fn new(app_handle: &AppHandle, _backend: AzookeyBackend) -> Result<Self> {
-        let resource_dir = app_handle
-            .path()
-            .resource_dir()
-            .context("failed to resolve Tauri resource directory")?;
+    pub fn new(resource_dir: &Path, _backend: AzookeyBackend) -> Result<Self> {
         let native_dir = resource_dir.join("azookey-native");
         let model_path = resource_dir.join("ggml-model-Q5_K_M.gguf");
 

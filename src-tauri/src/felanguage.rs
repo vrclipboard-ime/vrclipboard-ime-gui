@@ -4,11 +4,11 @@ use anyhow::Result;
 use tracing::{debug, error, info, trace};
 #[cfg(target_os = "windows")]
 use windows::{
-    core::{w, PCWSTR},
     Win32::{
-        System::Com::{CLSIDFromProgID, CoCreateInstance, CLSCTX_ALL},
+        System::Com::{CLSCTX_ALL, CLSIDFromProgID, CoCreateInstance},
         UI::Input::Ime::IFELanguage,
     },
+    core::{PCWSTR, w},
 };
 
 pub struct FElanguage {
